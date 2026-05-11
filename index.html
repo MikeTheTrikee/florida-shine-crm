@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Florida Shine — Job Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0A1628;--navy:#042C53;--blue:#185FA5;--sky:#378ADD;--sky-pale:#E6F1FB;
+  --gold:#E8A020;--gold-pale:#FDF3E3;--gold-mid:#F5B830;
+  --white:#FFFFFF;--surface:#F4F7FC;--surface-2:#EEF2F9;--border:#DDE4EF;--muted:#8A9BB5;
+  --green:#2D7D52;--green-pale:#E8F5EE;--red:#C0392B;--red-pale:#FDECEA;
+  --r:10px;--r-lg:16px;
+}
+body{font-family:'Sora',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;font-size:14px}
+.topbar{height:60px;background:var(--navy);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-icon{width:32px;height:32px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:15px}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#fff}
+.topbar-sub{font-size:10px;color:rgba(255,255,255,.35);font-family:'JetBrains Mono',monospace;letter-spacing:.1em;margin-top:1px}
+.topbar-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.06em}
+.main{max-width:1080px;margin:0 auto;padding:20px 18px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--white);border-radius:var(--r);border:1px solid var(--border);padding:14px 16px;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat.s-jobs::after{background:var(--sky)}.stat.s-rev::after{background:var(--gold)}.stat.s-mike::after{background:var(--navy)}.stat.s-mason::after{background:var(--green)}.stat.s-owe::after{background:var(--red)}
+.stat-label{font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:1px;line-height:1;color:var(--ink)}
+.stat-hint{font-size:10px;color:var(--muted);margin-top:3px}
+.banner{background:var(--navy);border-radius:var(--r-lg);padding:16px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.banner-tag{font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:4px}
+.banner-amount{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;color:var(--gold);line-height:1}
+.banner-mike-label{font-size:10px;color:rgba(255,255,255,.4)}
+.banner-mike-amt{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;color:#B5D4F4;line-height:1;margin-top:2px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.week-nav{display:flex;align-items:center;gap:6px}
+.wbtn{width:30px;height:30px;border:1px solid var(--border);background:var(--white);border-radius:var(--r);cursor:pointer;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.wbtn:hover{border-color:var(--sky);color:var(--sky)}
+.wlabel{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--ink);min-width:175px;text-align:center}
+.today-btn{font-size:11px;font-weight:600;color:var(--sky);cursor:pointer;padding:5px 12px;border:1px solid var(--sky);border-radius:999px;transition:all .15s;font-family:'Sora',sans-serif}
+.today-btn:hover{background:var(--sky);color:#fff}
+.add-btn{background:var(--gold);color:var(--navy);border:none;border-radius:var(--r);padding:9px 18px;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
+.add-btn:hover{background:var(--gold-mid);transform:translateY(-1px)}
+.table-card{background:var(--white);border-radius:var(--r-lg);border:1px solid var(--border);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead{background:var(--surface)}
+th{padding:9px 13px;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+td{padding:12px 13px;border-bottom:1px solid var(--surface-2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface)}
+.empty-state td{text-align:center;padding:48px;color:var(--muted);font-size:13px}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-cash{background:#E8F5EE;color:#1A5C38}.b-check{background:#E6F1FB;color:#0C447C}.b-stripe{background:#EDE9FE;color:#4C1D95}.b-venmo{background:#E0F2FE;color:#075985}.b-zelle{background:#FEF3C7;color:#92400E}
+.mike-split{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--navy)}
+.mason-split{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--green)}
+.act{padding:3px 9px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;margin-right:3px;transition:all .15s;font-family:'Sora',sans-serif}
+.act:hover{background:var(--surface);color:var(--ink)}.act.del{color:var(--red);border-color:#F7C1C1}.act.del:hover{background:var(--red-pale)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(4,44,83,.55);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--r-lg);padding:26px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;border:1px solid var(--border)}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1.5px;color:var(--navy);margin-bottom:18px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.frow label{display:block;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.frow input,.frow select,.frow textarea{width:100%;font-family:'Sora',sans-serif;font-size:13px;padding:9px 11px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--white);color:var(--ink);outline:none;transition:border-color .15s}
+.frow input:focus,.frow select:focus,.frow textarea:focus{border-color:var(--sky);box-shadow:0 0 0 3px rgba(55,138,221,.1)}
+.frow textarea{resize:vertical;min-height:56px}
+.pills{display:flex;gap:7px;flex-wrap:wrap}
+.pill{padding:7px 14px;border-radius:999px;border:1.5px solid var(--border);background:var(--white);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--muted);font-family:'Sora',sans-serif}
+.pill:hover{border-color:var(--sky);color:var(--sky)}.pill.sel{border-color:var(--gold);background:var(--gold-pale);color:var(--navy);font-weight:600}
+.split-box{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);padding:14px;display:flex;align-items:center;justify-content:space-around}
+.split-person{text-align:center}
+.split-name{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.split-amt{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;margin-top:3px}
+.split-pct{font-size:9px;color:var(--muted);margin-top:1px}
+.split-person.mike .split-amt{color:var(--navy)}.split-person.mason .split-amt{color:var(--green)}
+.split-div{font-size:22px;color:var(--border)}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+.btn-c{padding:9px 18px;background:transparent;border:1.5px solid var(--border);border-radius:var(--r);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;color:var(--muted);transition:all .15s}
+.btn-c:hover{background:var(--surface)}
+.btn-s{padding:9px 22px;background:var(--gold);border:none;border-radius:var(--r);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);transition:all .15s}
+.btn-s:hover{background:var(--gold-mid)}
+.toast{position:fixed;bottom:20px;right:20px;padding:11px 18px;border-radius:var(--r);font-size:13px;font-weight:500;z-index:999;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none;background:var(--ink);color:#fff}
+.toast.show{opacity:1;transform:translateY(0)}.toast.ok{background:var(--green)}.toast.err{background:var(--red)}
+@media(max-width:660px){.stats{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr}.main{padding:14px}th,td{padding:9px 9px}}
+.period-btn{padding:7px 16px;border-radius:999px;border:1.5px solid var(--border);background:var(--white);font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);font-family:'Sora',sans-serif;transition:all .15s}
+.period-btn:hover{border-color:var(--sky);color:var(--sky)}
+.period-btn.active{border-color:var(--gold);background:var(--gold-pale);color:var(--navy);font-weight:600}
+.astat{background:var(--white);border-radius:var(--r);border:1px solid var(--border);padding:16px;position:relative;overflow:hidden}
+.astat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.gr-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--surface-2);font-size:13px}
+.gr-row:last-child{border-bottom:none}
+.gr-label{color:var(--muted);font-size:12px}
+.gr-val{font-family:'JetBrains Mono',monospace;font-weight:500}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-icon">🪟</div>
+    <div>
+      <div class="topbar-title">Florida Shine LLC</div>
+      <div class="topbar-sub">Job Tracker</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="topbar-date" id="topDate"></div>
+    <button onclick="switchView('jobs')" id="tab-jobs" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.15);color:#fff;font-family:Sora,sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s">Jobs</button>
+    <button onclick="switchView('analytics')" id="tab-analytics" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.6);font-family:Sora,sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s">Analytics</button>
+  </div>
+</div>
+<div class="main">
+  <div class="stats" id="statsGrid"></div>
+
+  <!-- NET PROFIT STRIP -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px" id="netStrip"></div>
+
+  <div class="banner" id="banner" style="display:none">
+    <div>
+      <div class="banner-tag">Mason owed this week</div>
+      <div class="banner-amount" id="bannerMason">$0</div>
+    </div>
+    <div style="text-align:right">
+      <div class="banner-mike-label">Mike keeps</div>
+      <div class="banner-mike-amt" id="bannerMike">$0</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+  <div>
+  <div class="toolbar">
+    <div class="week-nav">
+      <button class="wbtn" onclick="shiftWeek(-1)">&#8249;</button>
+      <div class="wlabel" id="wlabel"></div>
+      <button class="wbtn" onclick="shiftWeek(1)">&#8250;</button>
+      <span class="today-btn" onclick="jumpToday()">Today</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <label class="add-btn" style="background:#2D7D52;color:#fff;cursor:pointer;border:2px solid #2D7D52;" title="Import jobs from CSV">
+        ⬆ Import CSV
+        <input type="file" id="importJobsFile" accept=".csv" onchange="importJobsCSV(event)" style="display:none">
+      </label>
+      <button class="add-btn" style="background:transparent;color:var(--navy);border:2px solid var(--navy);" onclick="exportJobsCSV()">⬇ Export CSV</button>
+      <button class="add-btn" onclick="openAdd()">&#43; Add Job</button>
+    </div>
+  </div>
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th><th>Customer</th><th>Address</th><th>Service</th>
+          <th>Total</th><th>Payment</th><th>Mike 60%</th><th>Mason 40%</th><th>Notes</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- CHARTS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px" id="chartsRow">
+    <div class="table-card" style="padding:20px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Revenue by Payment Method</div>
+      <canvas id="payChart" height="200"></canvas>
+      <div id="payLegend" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+    <div class="table-card" style="padding:20px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Jobs by Day of Week</div>
+      <canvas id="dayChart" height="200"></canvas>
+    </div>
+  </div>
+  </div>
+
+  <!-- RIGHT: EXPENSES -->
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Expenses This Week</div>
+      <button class="add-btn" style="padding:7px 14px;font-size:12px" onclick="openAddExpense()">+ Add Expense</button>
+    </div>
+    <div class="table-card" style="margin-bottom:12px">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Description</th><th>Amount</th><th>Mike</th><th>Mason</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="expBody"></tbody>
+      </table>
+    </div>
+    <div class="table-card" style="padding:16px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Expense Summary</div>
+      <div id="expSummary"></div>
+    </div>
+  </div>
+  </div>
+
+</div>
+
+<!-- ANALYTICS TAB -->
+<div id="analytics-view" style="display:none;max-width:1080px;margin:0 auto;padding:20px 18px">
+
+  <!-- Period selector -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-right:4px">View:</div>
+    <button class="period-btn active" onclick="setPeriod('week',this)">This Week</button>
+    <button class="period-btn" onclick="setPeriod('month',this)">This Month</button>
+    <button class="period-btn" onclick="setPeriod('alltime',this)">All Time</button>
+  </div>
+  <button onclick="openAIBot()" style="display:flex;align-items:center;gap:8px;padding:9px 18px;border-radius:var(--r);border:none;background:linear-gradient(135deg,#042C53,#185FA5);color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+    🤖 AI Analysis
+  </button>
+  </div>
+
+  <!-- Revenue KPIs -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px" id="aKpis"></div>
+
+  <!-- Payroll section -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="table-card" style="padding:20px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Payroll Summary</div>
+      <div id="payrollSummary"></div>
+    </div>
+    <div class="table-card" style="padding:20px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Revenue by Service Type</div>
+      <canvas id="serviceChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Weekly revenue trend -->
+  <div class="table-card" style="padding:20px;margin-bottom:20px">
+    <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Weekly Revenue Trend</div>
+    <canvas id="trendChart" height="120"></canvas>
+  </div>
+
+  <!-- Growth stats + top customers -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="table-card" style="padding:20px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Growth Stats</div>
+      <div id="growthStats"></div>
+    </div>
+    <div class="table-card" style="padding:20px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Top Customers</div>
+      <div id="topCustomers"></div>
+    </div>
+  </div>
+
+  <!-- Daily breakdown table -->
+  <div class="table-card" style="margin-bottom:20px">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Daily Breakdown</div>
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Jobs</th><th>Gross Revenue</th><th>Expenses</th><th>Net</th><th>Mike</th><th>Mason</th></tr>
+      </thead>
+      <tbody id="dailyBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-title" id="mTitle">Add Job</div>
+    <div class="form-grid">
+      <div class="frow"><label>Date</label><input type="date" id="fDate"></div>
+      <div class="frow"><label>Time</label><input type="time" id="fTime"></div>
+      <div class="frow" style="grid-column:1/-1"><label>Customer Name</label><input type="text" id="fCustomer" placeholder="John Smith"></div>
+      <div class="frow" style="grid-column:1/-1"><label>Address</label><input type="text" id="fAddress" placeholder="123 Main St, The Villages FL"></div>
+      <div class="frow" style="grid-column:1/-1">
+        <label>Service Type</label>
+        <select id="fService">
+          <option>Exterior Only</option><option>Interior Only</option>
+          <option>Exterior &amp; Interior</option><option>Exterior with Lanai</option>
+          <option>Exterior &amp; Interior with Lanai</option>
+          <option>Pressure Washing</option><option>Screen Cleaning</option><option>Other</option>
+        </select>
+      </div>
+      <div class="frow" style="grid-column:1/-1">
+        <label>Job Total ($)</label>
+        <input type="number" id="fTotal" placeholder="0" min="0" step="1" oninput="previewSplit()">
+      </div>
+      <div class="frow" style="grid-column:1/-1">
+        <label>Payment Method</label>
+        <div class="pills">
+          <button class="pill" onclick="pickPay(this,'Cash')">💵 Cash</button>
+          <button class="pill" onclick="pickPay(this,'Check')">📝 Check</button>
+          <button class="pill" onclick="pickPay(this,'Stripe')">💳 Stripe</button>
+          <button class="pill" onclick="pickPay(this,'Venmo')">📱 Venmo</button>
+          <button class="pill" onclick="pickPay(this,'Zelle')">⚡ Zelle</button>
+        </div>
+      </div>
+      <div class="frow" style="grid-column:1/-1">
+        <label>Pay Split Preview</label>
+        <div class="split-box">
+          <div class="split-person mike">
+            <div class="split-name">Mike</div>
+            <div class="split-amt" id="pMike">$0</div>
+            <div class="split-pct">60%</div>
+          </div>
+          <div class="split-div">&#247;</div>
+          <div class="split-person mason">
+            <div class="split-name">Mason</div>
+            <div class="split-amt" id="pMason">$0</div>
+            <div class="split-pct">40%</div>
+          </div>
+        </div>
+      </div>
+      <div class="frow" style="grid-column:1/-1"><label>Notes</label><textarea id="fNotes" placeholder="Tips, special instructions..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-c" onclick="closeModal()">Cancel</button>
+      <button class="btn-s" onclick="saveJob()">Save Job</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPENSE MODAL -->
+<!-- AI BOT MODAL -->
+<div class="overlay" id="aiBotOverlay">
+  <div class="modal" style="max-width:600px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title" style="margin-bottom:0">🤖 AI Analysis</div>
+      <button onclick="closeAIBot()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="aiQuickBtns">
+      <button class="period-btn" onclick="askAI('Give me a full breakdown of our performance this week including revenue, jobs, pay splits, and any insights.')">📊 Weekly Breakdown</button>
+      <button class="period-btn" onclick="askAI('Analyze our growth trend over time and tell us if we are on track. What should we focus on to increase revenue?')">📈 Growth Analysis</button>
+      <button class="period-btn" onclick="askAI('What is our most profitable service type and what days are we most productive? Give specific recommendations.')">💡 Recommendations</button>
+      <button class="period-btn" onclick="askAI('Calculate exact payroll for Mike and Mason this week including gross earnings, expense deductions, and exact amounts to pay.')">💰 Payroll Report</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input type="text" id="aiInput" placeholder="Ask anything about your business..." style="flex:1;font-family:'Sora',sans-serif;font-size:13px;padding:10px 14px;border-radius:var(--r);border:1.5px solid var(--border);outline:none;color:var(--ink)" onkeydown="if(event.key==='Enter')sendAI()">
+      <button onclick="sendAI()" style="padding:10px 18px;background:var(--gold);border:none;border-radius:var(--r);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy);white-space:nowrap">Ask</button>
+    </div>
+    <div id="aiResponse" style="background:var(--surface);border-radius:var(--r);border:1px solid var(--border);padding:16px;min-height:120px;font-size:13px;line-height:1.7;color:var(--ink);white-space:pre-wrap;display:none"></div>
+    <div id="aiLoading" style="display:none;text-align:center;padding:32px;color:var(--muted)">
+      <div style="font-size:24px;margin-bottom:8px;animation:spin 1s linear infinite;display:inline-block">⚙️</div>
+      <div style="font-size:13px">Analyzing your data...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
+
+<div class="overlay" id="expOverlay">
+  <div class="modal">
+    <div class="modal-title" id="expTitle">Add Expense</div>
+    <div class="form-grid">
+      <div class="frow"><label>Date</label><input type="date" id="eDate"></div>
+      <div class="frow"><label>Amount ($)</label><input type="number" id="eAmount" placeholder="0" min="0" step="1" oninput="previewExpSplit()"></div>
+      <div class="frow" style="grid-column:1/-1"><label>Description</label><input type="text" id="eDesc" placeholder="Gas, supplies, equipment..."></div>
+      <div class="frow" style="grid-column:1/-1">
+        <label>Expense Split Preview</label>
+        <div class="split-box">
+          <div class="split-person mike">
+            <div class="split-name">Mike</div>
+            <div class="split-amt" id="eMike">$0</div>
+            <div class="split-pct">60%</div>
+          </div>
+          <div class="split-div">&#247;</div>
+          <div class="split-person mason">
+            <div class="split-name">Mason</div>
+            <div class="split-amt" id="eMason">$0</div>
+            <div class="split-pct">40%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-c" onclick="closeExpModal()">Cancel</button>
+      <button class="btn-s" onclick="saveExpense()">Save Expense</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SURL='https://siglipinabgwgwujvatm.supabase.co';
+const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpZ2xpcGluYWJnd2d3dWp2YXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTc5ODksImV4cCI6MjA5MzU3Mzk4OX0._J1P82_oLycZU--Fv7pHPQU4AfC9__FMG9aBukDS6vs';
+const sb=supabase.createClient(SURL,SKEY);
+
+let jobs=[];
+let editId=null,selPay='';
+let wkStart=weekOf(new Date());
+
+async function loadJobs(){
+  const{data,error}=await sb.from('window_jobs').select('*').order('date',{ascending:false});
+  if(error){console.error(error);return}
+  jobs=data||[];
+  render();
+}
+function weekOf(d){const x=new Date(d);const day=x.getDay();x.setDate(x.getDate()-day+(day===0?-6:1));x.setHours(0,0,0,0);return x}
+function weekEnd(s){const e=new Date(s);e.setDate(e.getDate()+6);return e}
+function inWeek(ds,s){if(!ds)return false;const d=new Date(ds+'T00:00:00');const e=weekEnd(s);e.setHours(23,59,59,999);return d>=s&&d<=e}
+function fmt(n){return'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}
+function fmtDate(s){if(!s)return'—';const[y,m,d]=s.split('-');return`${m}/${d}/${y.slice(2)}`}
+function fmtTime(t){if(!t)return'';const[h,m]=t.split(':');const hr=parseInt(h);return`${hr>12?hr-12:hr||12}:${m} ${hr>=12?'PM':'AM'}`}
+function today(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function wkLabel(s){const e=weekEnd(s);const o={month:'short',day:'numeric'};return`${s.toLocaleDateString('en-US',o)} — ${e.toLocaleDateString('en-US',{...o,year:'numeric'})}`}
+function shiftWeek(d){wkStart=new Date(wkStart);wkStart.setDate(wkStart.getDate()+d*7);render();renderExpenses();renderNetStrip()}
+function jumpToday(){wkStart=weekOf(new Date());render();renderExpenses();renderNetStrip()}
+
+function render(){
+  document.getElementById('topDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  document.getElementById('wlabel').textContent=wkLabel(wkStart);
+  const wj=jobs.filter(j=>inWeek(j.date,wkStart));
+  const rev=wj.reduce((s,j)=>s+Number(j.total||0),0);
+  const mike=rev*.6,mason=rev*.4;
+  document.getElementById('statsGrid').innerHTML=`
+    <div class="stat s-jobs"><div class="stat-label">Jobs This Week</div><div class="stat-val">${wj.length}</div><div class="stat-hint">completed</div></div>
+    <div class="stat s-rev"><div class="stat-label">Total Revenue</div><div class="stat-val">${fmt(rev)}</div><div class="stat-hint">gross</div></div>
+    <div class="stat s-mike"><div class="stat-label">Mike Earns</div><div class="stat-val">${fmt(mike)}</div><div class="stat-hint">60% split</div></div>
+    <div class="stat s-mason"><div class="stat-label">Mason Earns</div><div class="stat-val">${fmt(mason)}</div><div class="stat-hint">40% split</div></div>
+    <div class="stat s-owe"><div class="stat-label">Owed to Mason</div><div class="stat-val">${fmt(mason)}</div><div class="stat-hint">pay by Sunday</div></div>`;
+  const banner=document.getElementById('banner');
+  if(mason>0){banner.style.display='flex';document.getElementById('bannerMason').textContent=fmt(mason);document.getElementById('bannerMike').textContent=fmt(mike)}
+  else banner.style.display='none';
+  const tbody=document.getElementById('tbody');
+  if(typeof renderCharts==='function')renderCharts(wj);
+  if(!wj.length){tbody.innerHTML=`<tr class="empty-state"><td colspan="10">No jobs this week — click + Add Job to log one.</td></tr>`;return}
+  const sorted=[...wj].sort((a,b)=>a.date===b.date?(a.time||'').localeCompare(b.time||''):a.date.localeCompare(b.date));
+  tbody.innerHTML=sorted.map(j=>{
+    const t=Number(j.total||0);
+    return`<tr>
+      <td style="white-space:nowrap"><span style="font-family:'JetBrains Mono',monospace;font-size:11px">${fmtDate(j.date)}</span>${j.time?`<br><span style="font-size:10px;color:var(--muted)">${fmtTime(j.time)}</span>`:''}</td>
+      <td style="font-weight:500">${j.customer||'—'}</td>
+      <td style="color:var(--muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.address||''}">${j.address||'—'}</td>
+      <td style="font-size:11px">${j.service||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(t)}</td>
+      <td>${payBadge(j.payment)}</td>
+      <td class="mike-split">${fmt(t*.6)}</td>
+      <td class="mason-split">${fmt(t*.4)}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes||'—'}</td>
+      <td style="white-space:nowrap"><button class="act" onclick="openEdit('${j.id}')">Edit</button><button class="act del" onclick="del('${j.id}')">Del</button></td>
+    </tr>`}).join('');
+}
+
+function payBadge(p){
+  const m={Cash:'b-cash 💵 Cash',Check:'b-check 📝 Check',Stripe:'b-stripe 💳 Stripe',Venmo:'b-venmo 📱 Venmo',Zelle:'b-zelle ⚡ Zelle'};
+  const v=m[p]||'b-check '+(p||'—');const[cls,...rest]=v.split(' ');
+  return`<span class="badge ${cls}">${rest.join(' ')}</span>`;
+}
+
+function openAdd(){editId=null;selPay='';document.getElementById('mTitle').textContent='Add Job';resetForm();document.getElementById('fDate').value=today();document.getElementById('overlay').classList.add('open')}
+function openEdit(id){
+  editId=id;selPay='';const j=jobs.find(x=>x.id===id);if(!j)return;
+  document.getElementById('mTitle').textContent='Edit Job';resetForm();
+  document.getElementById('fDate').value=j.date||'';document.getElementById('fTime').value=j.time||'';
+  document.getElementById('fCustomer').value=j.customer||'';document.getElementById('fAddress').value=j.address||'';
+  document.getElementById('fService').value=j.service||'Exterior Only';document.getElementById('fTotal').value=j.total||'';document.getElementById('fNotes').value=j.notes||'';
+  if(j.payment){selPay=j.payment;document.querySelectorAll('.pill').forEach(p=>{if(p.textContent.trim().includes(j.payment))p.classList.add('sel')})}
+  previewSplit();document.getElementById('overlay').classList.add('open');
+}
+function resetForm(){
+  ['fDate','fTime','fCustomer','fAddress','fTotal','fNotes'].forEach(id=>{document.getElementById(id).value=''});
+  document.getElementById('fService').value='Exterior Only';
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('sel'));
+  document.getElementById('pMike').textContent='$0';document.getElementById('pMason').textContent='$0';
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open')}
+function pickPay(btn,val){document.querySelectorAll('.pill').forEach(p=>p.classList.remove('sel'));btn.classList.add('sel');selPay=val}
+function previewSplit(){const t=Number(document.getElementById('fTotal').value||0);document.getElementById('pMike').textContent=fmt(t*.6);document.getElementById('pMason').textContent=fmt(t*.4)}
+
+async function saveJob(){
+  const customer=document.getElementById('fCustomer').value.trim();
+  const total=document.getElementById('fTotal').value;
+  if(!customer){toast('Customer name required','err');return}
+  if(!total||isNaN(total)){toast('Enter a valid total','err');return}
+  if(!selPay){toast('Select a payment method','err');return}
+  const data={id:editId||Date.now().toString(),date:document.getElementById('fDate').value,time:document.getElementById('fTime').value,customer,address:document.getElementById('fAddress').value.trim(),service:document.getElementById('fService').value,total:Number(total),payment:selPay,notes:document.getElementById('fNotes').value.trim()};
+  const{error}=editId
+    ? await sb.from('window_jobs').update({date:data.date,time:data.time,customer:data.customer,address:data.address,service:data.service,total:data.total,payment:data.payment,notes:data.notes}).eq('id',editId)
+    : await sb.from('window_jobs').insert([{date:data.date,time:data.time,customer:data.customer,address:data.address,service:data.service,total:data.total,payment:data.payment,notes:data.notes}]);
+  if(error){toast('Error saving job','err');console.error(error);return}
+  closeModal();await loadJobs();toast(editId?'Job updated':'Job added ✓','ok');
+}
+async function del(id){if(!confirm('Delete this job?'))return;const{error}=await sb.from('window_jobs').delete().eq('id',id);if(error){toast('Error deleting','err');return}await loadJobs();toast('Deleted')}
+function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(type?' '+type:'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800)}
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeModal()});
+
+let payChartInst=null,dayChartInst=null;
+
+function renderCharts(wj){
+  const payTotals={};
+  wj.forEach(j=>{const p=j.payment||'Other';payTotals[p]=(payTotals[p]||0)+Number(j.total||0)});
+
+  const payColors={Cash:'#2D7D52',Check:'#185FA5',Stripe:'#4C1D95',Venmo:'#075985',Zelle:'#92400E',Other:'#8A9BB5'};
+  const payLabels=Object.keys(payTotals);
+  const payData=payLabels.map(k=>payTotals[k]);
+  const payBg=payLabels.map(k=>payColors[k]||'#8A9BB5');
+
+  const payCtx=document.getElementById('payChart').getContext('2d');
+  if(payChartInst)payChartInst.destroy();
+
+  if(payData.length===0){
+    payCtx.clearRect(0,0,payCtx.canvas.width,payCtx.canvas.height);
+    payCtx.fillStyle='#8A9BB5';payCtx.font='13px Sora,sans-serif';payCtx.textAlign='center';
+    payCtx.fillText('No data yet',payCtx.canvas.width/2,100);
+    document.getElementById('payLegend').innerHTML='';
+  } else {
+    payChartInst=new Chart(payCtx,{
+      type:'doughnut',
+      data:{labels:payLabels,datasets:[{data:payData,backgroundColor:payBg,borderWidth:0,hoverOffset:6}]},
+      options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': $'+Math.round(ctx.parsed).toLocaleString()}}}}
+    });
+    const total=payData.reduce((a,b)=>a+b,0);
+    document.getElementById('payLegend').innerHTML=payLabels.map((l,i)=>`
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink)">
+        <div style="width:8px;height:8px;border-radius:50%;background:${payBg[i]};flex-shrink:0"></div>
+        <span>${l}</span>
+        <span style="color:var(--muted);font-family:'JetBrains Mono',monospace">$${Math.round(payData[i]).toLocaleString()}</span>
+        <span style="color:var(--muted)">(${Math.round(payData[i]/total*100)}%)</span>
+      </div>`).join('');
+  }
+
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dayCounts=[0,0,0,0,0,0,0];
+  wj.forEach(j=>{
+    if(!j.date)return;
+    const d=new Date(j.date+'T00:00:00');
+    let dow=d.getDay();dow=dow===0?6:dow-1;
+    dayCounts[dow]++;
+  });
+
+  const dayCtx=document.getElementById('dayChart').getContext('2d');
+  if(dayChartInst)dayChartInst.destroy();
+  dayChartInst=new Chart(dayCtx,{
+    type:'bar',
+    data:{
+      labels:days,
+      datasets:[{data:dayCounts,backgroundColor:dayCounts.map(v=>v===Math.max(...dayCounts)&&v>0?'#E8A020':'#B5D4F4'),borderRadius:6,borderWidth:0}]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+          label:ctx=>{
+            const day=ctx.label;
+            const dayIdx=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].indexOf(day);
+            const rev=wj.filter(j=>{if(!j.date)return false;const d=new Date(j.date+'T00:00:00');let dow=d.getDay();dow=dow===0?6:dow-1;return dow===dayIdx;}).reduce((s,j)=>s+Number(j.total||0),0);
+            return [` ${ctx.parsed.y} job${ctx.parsed.y!==1?'s':''}`,` $${Math.round(rev).toLocaleString()} revenue`];
+          }
+        }}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{family:'Sora',size:11},color:'#8A9BB5'}},
+        y:{beginAtZero:true,ticks:{stepSize:1,font:{family:'JetBrains Mono',size:10},color:'#8A9BB5'},grid:{color:'#EEF2F9'}}
+      }
+    }
+  });
+}
+
+// load from Supabase on startup
+loadJobs();
+loadExpenses();
+
+// ── EXPENSES ──────────────────────────────────────────────────────────────
+let expenses=[];
+let editExpId=null;
+
+async function loadExpenses(){
+  const{data,error}=await sb.from('window_expenses').select('*').order('date',{ascending:false});
+  if(error){console.error('Expenses error:',error);return}
+  expenses=data||[];
+  renderExpenses();
+  renderNetStrip();
+}
+
+function renderExpenses(){
+  const we=expenses.filter(e=>inWeek(e.date,wkStart));
+  const body=document.getElementById('expBody');
+  if(!we.length){
+    body.innerHTML=`<tr class="empty-state"><td colspan="6" style="padding:24px;text-align:center;color:var(--muted);font-size:12px">No expenses this week</td></tr>`;
+    renderExpSummary(we);
+    return;
+  }
+  const sorted=[...we].sort((a,b)=>a.date.localeCompare(b.date));
+  body.innerHTML=sorted.map(e=>{
+    const amt=Number(e.amount||0);
+    return`<tr>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap">${fmtDate(e.date)}</td>
+      <td style="font-size:12px;font-weight:500">${e.description||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--red)">${fmt(amt)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--navy)">${fmt(amt*.6)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green)">${fmt(amt*.4)}</td>
+      <td><button class="act" onclick="openEditExpense('${e.id}')">Edit</button><button class="act del" onclick="delExpense('${e.id}')">Del</button></td>
+    </tr>`;
+  }).join('');
+  renderExpSummary(we);
+}
+
+function renderExpSummary(we){
+  const total=we.reduce((s,e)=>s+Number(e.amount||0),0);
+  const mike=total*.6,mason=total*.4;
+  const summary=document.getElementById('expSummary');
+  if(!summary)return;
+  summary.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--muted)">Total expenses</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--red)">${fmt(total)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--muted)">Mike owes (60%)</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--navy)">${fmt(mike)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
+      <span style="font-size:12px;color:var(--muted)">Mason owes (40%)</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--green)">${fmt(mason)}</span>
+    </div>`;
+}
+
+function renderNetStrip(){
+  const wj=jobs.filter(j=>inWeek(j.date,wkStart));
+  const we=expenses.filter(e=>inWeek(e.date,wkStart));
+  const rev=wj.reduce((s,j)=>s+Number(j.total||0),0);
+  const exp=we.reduce((s,e)=>s+Number(e.amount||0),0);
+  const net=rev-exp;
+  const mikeNet=rev*.6-exp*.6;
+  const masonNet=rev*.4-exp*.4;
+  const strip=document.getElementById('netStrip');
+  if(!strip)return;
+  strip.innerHTML=`
+    <div class="stat" style="border-top:2px solid #E24B4A">
+      <div class="stat-label">Total Expenses</div>
+      <div class="stat-val" style="color:var(--red)">${fmt(exp)}</div>
+      <div class="stat-hint">this week</div>
+    </div>
+    <div class="stat" style="border-top:2px solid var(--green)">
+      <div class="stat-label">Net Revenue</div>
+      <div class="stat-val" style="color:var(--green)">${fmt(net)}</div>
+      <div class="stat-hint">after expenses</div>
+    </div>
+    <div class="stat" style="border-top:2px solid var(--gold)">
+      <div class="stat-label">Mike Net Take-Home</div>
+      <div class="stat-val">${fmt(mikeNet)}</div>
+      <div class="stat-hint">after your 60% expenses</div>
+    </div>`;
+}
+
+function openAddExpense(){
+  editExpId=null;
+  document.getElementById('expTitle').textContent='Add Expense';
+  document.getElementById('eDate').value=today();
+  document.getElementById('eAmount').value='';
+  document.getElementById('eDesc').value='';
+  document.getElementById('eMike').textContent='$0';
+  document.getElementById('eMason').textContent='$0';
+  document.getElementById('expOverlay').classList.add('open');
+}
+
+function openEditExpense(id){
+  editExpId=id;
+  const e=expenses.find(x=>x.id===id);if(!e)return;
+  document.getElementById('expTitle').textContent='Edit Expense';
+  document.getElementById('eDate').value=e.date||'';
+  document.getElementById('eAmount').value=e.amount||'';
+  document.getElementById('eDesc').value=e.description||'';
+  previewExpSplit();
+  document.getElementById('expOverlay').classList.add('open');
+}
+
+function closeExpModal(){document.getElementById('expOverlay').classList.remove('open')}
+
+function previewExpSplit(){
+  const a=Number(document.getElementById('eAmount').value||0);
+  document.getElementById('eMike').textContent=fmt(a*.6);
+  document.getElementById('eMason').textContent=fmt(a*.4);
+}
+
+async function saveExpense(){
+  const desc=document.getElementById('eDesc').value.trim();
+  const amount=document.getElementById('eAmount').value;
+  if(!desc){toast('Description required','err');return}
+  if(!amount||isNaN(amount)){toast('Enter a valid amount','err');return}
+  const data={date:document.getElementById('eDate').value,description:desc,amount:Number(amount)};
+  const{error}=editExpId
+    ? await sb.from('window_expenses').update(data).eq('id',editExpId)
+    : await sb.from('window_expenses').insert([data]);
+  if(error){toast('Error saving','err');console.error(error);return}
+  closeExpModal();await loadExpenses();toast(editExpId?'Expense updated':'Expense added ✓','ok');
+}
+
+async function delExpense(id){
+  if(!confirm('Delete this expense?'))return;
+  const{error}=await sb.from('window_expenses').delete().eq('id',id);
+  if(error){toast('Error deleting','err');return}
+  await loadExpenses();toast('Deleted');
+}
+
+document.getElementById('expOverlay').addEventListener('click',e=>{if(e.target.id==='expOverlay')closeExpModal()});
+
+
+// ── ANALYTICS ─────────────────────────────────────────────────────────────
+let currentPeriod = 'week';
+let serviceChartInst=null, trendChartInst=null;
+
+function switchView(view) {
+  const jobsView = document.querySelector('.main');
+  const analyticsView = document.getElementById('analytics-view');
+  const tabJobs = document.getElementById('tab-jobs');
+  const tabAnalytics = document.getElementById('tab-analytics');
+
+  if(view === 'analytics') {
+    jobsView.style.display = 'none';
+    analyticsView.style.display = 'block';
+    tabJobs.style.background = 'transparent';
+    tabJobs.style.color = 'rgba(255,255,255,.6)';
+    tabAnalytics.style.background = 'rgba(255,255,255,.15)';
+    tabAnalytics.style.color = '#fff';
+    renderAnalytics();
+  } else {
+    jobsView.style.display = 'block';
+    analyticsView.style.display = 'none';
+    tabJobs.style.background = 'rgba(255,255,255,.15)';
+    tabJobs.style.color = '#fff';
+    tabAnalytics.style.background = 'transparent';
+    tabAnalytics.style.color = 'rgba(255,255,255,.6)';
+  }
+}
+
+function setPeriod(period, btn) {
+  currentPeriod = period;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAnalytics();
+}
+
+function getFilteredJobs() {
+  const now = new Date();
+  if(currentPeriod === 'week') {
+    const ws = weekOf(new Date());
+    return jobs.filter(j => inWeek(j.date, ws));
+  } else if(currentPeriod === 'month') {
+    const m = now.getMonth(), y = now.getFullYear();
+    return jobs.filter(j => {
+      if(!j.date) return false;
+      const d = new Date(j.date + 'T00:00:00');
+      return d.getMonth() === m && d.getFullYear() === y;
+    });
+  }
+  return [...jobs];
+}
+
+function getFilteredExpenses() {
+  const now = new Date();
+  if(currentPeriod === 'week') {
+    const ws = weekOf(new Date());
+    return expenses.filter(e => inWeek(e.date, ws));
+  } else if(currentPeriod === 'month') {
+    const m = now.getMonth(), y = now.getFullYear();
+    return expenses.filter(e => {
+      if(!e.date) return false;
+      const d = new Date(e.date + 'T00:00:00');
+      return d.getMonth() === m && d.getFullYear() === y;
+    });
+  }
+  return [...expenses];
+}
+
+function renderAnalytics() {
+  const fj = getFilteredJobs();
+  const fe = getFilteredExpenses();
+  const allRev = jobs.reduce((s,j) => s+Number(j.total||0), 0);
+  const allExp = expenses.reduce((s,e) => s+Number(e.amount||0), 0);
+
+  const rev = fj.reduce((s,j) => s+Number(j.total||0), 0);
+  const exp = fe.reduce((s,e) => s+Number(e.amount||0), 0);
+  const net = rev - exp;
+  const avgJob = fj.length ? rev/fj.length : 0;
+
+  // KPI cards
+  document.getElementById('aKpis').innerHTML = `
+    <div class="astat" style="--c:var(--gold)"><div class="astat::after" style="background:var(--gold)"></div>
+      <div class="stat-label">Gross Revenue</div>
+      <div class="stat-val" style="color:var(--gold)">${fmt(rev)}</div>
+      <div class="stat-hint">${fj.length} jobs</div>
+    </div>
+    <div class="astat"><div class="stat-label">Total Expenses</div>
+      <div class="stat-val" style="color:var(--red)">${fmt(exp)}</div>
+      <div class="stat-hint">operating costs</div>
+    </div>
+    <div class="astat"><div class="stat-label">Net Profit</div>
+      <div class="stat-val" style="color:var(--green)">${fmt(net)}</div>
+      <div class="stat-hint">after expenses</div>
+    </div>
+    <div class="astat"><div class="stat-label">Avg Job Value</div>
+      <div class="stat-val">${fmt(avgJob)}</div>
+      <div class="stat-hint">per job</div>
+    </div>`;
+
+  // Payroll summary
+  const mikeGross = rev * 0.6;
+  const masonGross = rev * 0.4;
+  const mikeExp = exp * 0.6;
+  const masonExp = exp * 0.4;
+  const mikeNet = mikeGross - mikeExp;
+  const masonNet = masonGross - masonExp;
+
+  document.getElementById('payrollSummary').innerHTML = `
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--navy)"></div>Mike (60%)
+      </div>
+      <div class="gr-row"><span class="gr-label">Gross earnings</span><span class="gr-val" style="color:var(--navy)">${fmt(mikeGross)}</span></div>
+      <div class="gr-row"><span class="gr-label">Expense share</span><span class="gr-val" style="color:var(--red)">-${fmt(mikeExp)}</span></div>
+      <div class="gr-row"><span class="gr-label">Net take-home</span><span class="gr-val" style="color:var(--green);font-weight:700">${fmt(mikeNet)}</span></div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:16px">
+      <div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>Mason (40%)
+      </div>
+      <div class="gr-row"><span class="gr-label">Gross earnings</span><span class="gr-val" style="color:var(--green)">${fmt(masonGross)}</span></div>
+      <div class="gr-row"><span class="gr-label">Expense share</span><span class="gr-val" style="color:var(--red)">-${fmt(masonExp)}</span></div>
+      <div class="gr-row"><span class="gr-label">Net take-home</span><span class="gr-val" style="color:var(--green);font-weight:700">${fmt(masonNet)}</span></div>
+      <div class="gr-row" style="margin-top:8px;background:var(--gold-pale);border-radius:8px;padding:8px 10px;border:none">
+        <span style="font-size:12px;font-weight:600;color:var(--navy)">Amount to pay Mason</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--gold);font-size:14px">${fmt(masonNet)}</span>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
+      <div class="gr-row"><span class="gr-label">All-time revenue</span><span class="gr-val">${fmt(allRev)}</span></div>
+      <div class="gr-row"><span class="gr-label">All-time expenses</span><span class="gr-val" style="color:var(--red)">-${fmt(allExp)}</span></div>
+      <div class="gr-row"><span class="gr-label">All-time net</span><span class="gr-val" style="color:var(--green)">${fmt(allRev-allExp)}</span></div>
+    </div>`;
+
+  // Service type chart
+  const serviceTotals = {};
+  fj.forEach(j => { const s=j.service||'Other'; serviceTotals[s]=(serviceTotals[s]||0)+Number(j.total||0); });
+  const sLabels = Object.keys(serviceTotals);
+  const sData = sLabels.map(k => serviceTotals[k]);
+  const sColors = ['#185FA5','#378ADD','#E8A020','#2D7D52','#C0392B','#6B3FA0','#1A7A6E'];
+  const sCtx = document.getElementById('serviceChart').getContext('2d');
+  if(serviceChartInst) serviceChartInst.destroy();
+  if(sData.length === 0) {
+    sCtx.clearRect(0,0,sCtx.canvas.width,sCtx.canvas.height);
+    sCtx.fillStyle='#8A9BB5';sCtx.font='13px Sora,sans-serif';sCtx.textAlign='center';
+    sCtx.fillText('No data yet',sCtx.canvas.width/2,100);
+  } else {
+    serviceChartInst = new Chart(sCtx, {
+      type:'doughnut',
+      data:{labels:sLabels,datasets:[{data:sData,backgroundColor:sColors.slice(0,sLabels.length),borderWidth:0,hoverOffset:6}]},
+      options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{family:'Sora',size:10},color:'#8A9BB5',boxWidth:10}},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': $'+Math.round(ctx.parsed).toLocaleString()}}}}
+    });
+  }
+
+  // Weekly trend (last 8 weeks)
+  const weeks = [];
+  const wRevs = [];
+  const wNets = [];
+  for(let i=7;i>=0;i--) {
+    const ws = new Date(weekOf(new Date()));
+    ws.setDate(ws.getDate() - i*7);
+    const we = new Date(ws); we.setDate(we.getDate()+6); we.setHours(23,59,59,999);
+    const wj2 = jobs.filter(j => { if(!j.date) return false; const d=new Date(j.date+'T00:00:00'); return d>=ws&&d<=we; });
+    const we2 = expenses.filter(e => { if(!e.date) return false; const d=new Date(e.date+'T00:00:00'); return d>=ws&&d<=we; });
+    const wr = wj2.reduce((s,j)=>s+Number(j.total||0),0);
+    const wx = we2.reduce((s,e)=>s+Number(e.amount||0),0);
+    weeks.push(ws.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    wRevs.push(wr);
+    wNets.push(wr-wx);
+  }
+
+  const tCtx = document.getElementById('trendChart').getContext('2d');
+  if(trendChartInst) trendChartInst.destroy();
+  trendChartInst = new Chart(tCtx, {
+    type:'line',
+    data:{
+      labels:weeks,
+      datasets:[
+        {label:'Gross Revenue',data:wRevs,borderColor:'#E8A020',backgroundColor:'rgba(232,160,32,.1)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#E8A020',fill:true,tension:.3},
+        {label:'Net Profit',data:wNets,borderColor:'#2D7D52',backgroundColor:'rgba(45,125,82,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#2D7D52',fill:true,tension:.3}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{font:{family:'Sora',size:11},color:'#8A9BB5',boxWidth:12}},tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': $'+Math.round(ctx.parsed.y).toLocaleString()}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{family:'Sora',size:10},color:'#8A9BB5'}},
+        y:{beginAtZero:true,ticks:{font:{family:'JetBrains Mono',size:10},color:'#8A9BB5',callback:v=>'$'+v.toLocaleString()},grid:{color:'#EEF2F9'}}
+      }
+    }
+  });
+
+  // Growth stats
+  const allTimeJobs = jobs.length;
+  const allTimeRev = jobs.reduce((s,j)=>s+Number(j.total||0),0);
+  const allTimeAvg = allTimeJobs ? allTimeRev/allTimeJobs : 0;
+  const thisWeekRev = jobs.filter(j=>inWeek(j.date,weekOf(new Date()))).reduce((s,j)=>s+Number(j.total||0),0);
+  const lastWeekStart = new Date(weekOf(new Date())); lastWeekStart.setDate(lastWeekStart.getDate()-7);
+  const lastWeekRev = jobs.filter(j=>inWeek(j.date,lastWeekStart)).reduce((s,j)=>s+Number(j.total||0),0);
+  const growth = lastWeekRev > 0 ? ((thisWeekRev-lastWeekRev)/lastWeekRev*100).toFixed(1) : 0;
+  const growthColor = growth >= 0 ? 'var(--green)' : 'var(--red)';
+  const growthSign = growth >= 0 ? '+' : '';
+
+  document.getElementById('growthStats').innerHTML = `
+    <div class="gr-row"><span class="gr-label">All-time jobs</span><span class="gr-val">${allTimeJobs}</span></div>
+    <div class="gr-row"><span class="gr-label">All-time revenue</span><span class="gr-val">${fmt(allTimeRev)}</span></div>
+    <div class="gr-row"><span class="gr-label">All-time avg job</span><span class="gr-val">${fmt(allTimeAvg)}</span></div>
+    <div class="gr-row"><span class="gr-label">This week revenue</span><span class="gr-val">${fmt(thisWeekRev)}</span></div>
+    <div class="gr-row"><span class="gr-label">Last week revenue</span><span class="gr-val">${fmt(lastWeekRev)}</span></div>
+    <div class="gr-row"><span class="gr-label">Week over week</span><span class="gr-val" style="color:${growthColor}">${growthSign}${growth}%</span></div>`;
+
+  // Top customers
+  const custTotals = {};
+  jobs.forEach(j => { const c=j.customer||'Unknown'; custTotals[c]=(custTotals[c]||0)+Number(j.total||0); });
+  const topCusts = Object.entries(custTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('topCustomers').innerHTML = topCusts.length
+    ? topCusts.map(([name,total],i)=>`
+      <div class="gr-row">
+        <span style="display:flex;align-items:center;gap:8px">
+          <span style="width:18px;height:18px;border-radius:50%;background:var(--navy);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</span>
+          <span class="gr-label">${name}</span>
+        </span>
+        <span class="gr-val">${fmt(total)}</span>
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:16px 0;text-align:center">No jobs yet</div>';
+
+  // Daily breakdown
+  const dayMap = {};
+  fj.forEach(j => { if(!j.date){return} dayMap[j.date] = dayMap[j.date]||{jobs:0,rev:0}; dayMap[j.date].jobs++; dayMap[j.date].rev+=Number(j.total||0); });
+  const expDayMap = {};
+  fe.forEach(e => { if(!e.date){return} expDayMap[e.date]=(expDayMap[e.date]||0)+Number(e.amount||0); });
+  const days2 = Object.keys(dayMap).sort().reverse();
+  document.getElementById('dailyBody').innerHTML = days2.length
+    ? days2.map(d => {
+        const r=dayMap[d].rev, x=expDayMap[d]||0, n=r-x;
+        return `<tr>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${fmtDate(d)}</td>
+          <td style="font-weight:500">${dayMap[d].jobs}</td>
+          <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--gold)">${fmt(r)}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--red)">${x>0?'-'+fmt(x):'—'}</td>
+          <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--green)">${fmt(n)}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--navy)">${fmt(r*.6)}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--green)">${fmt(r*.4)}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No data for this period</td></tr>`;
+}
+
+// Fix day chart tooltip to show revenue
+
+
+// ── CSV EXPORT ─────────────────────────────────────────────────────────────
+function exportJobsCSV() {
+  if(!jobs.length){toast('No jobs to export','err');return}
+  const headers = ['Date','Time','Customer','Address','Service','Total','Payment','Notes'];
+  const rows = [headers];
+  jobs.forEach(j => {
+    rows.push([j.date||'',j.time||'',j.customer||'',j.address||'',j.service||'',j.total||'',j.payment||'',j.notes||'']);
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `florida-shine-jobs-${today()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${jobs.length} jobs`,'ok');
+}
+
+// ── CSV IMPORT ─────────────────────────────────────────────────────────────
+async function importJobsCSV(event) {
+  const file = event.target.files[0];
+  if(!file){return}
+  const text = await file.text();
+  const lines = text.split('\n').filter(l => l.trim());
+  if(lines.length < 2){toast('CSV appears empty','err');return}
+
+  const headers = parseCSVRow(lines[0]).map(h => h.toLowerCase().trim());
+  const dateIdx = headers.findIndex(h => h.includes('date'));
+  const timeIdx = headers.findIndex(h => h.includes('time'));
+  const custIdx = headers.findIndex(h => h.includes('customer'));
+  const addrIdx = headers.findIndex(h => h.includes('address'));
+  const svcIdx = headers.findIndex(h => h.includes('service'));
+  const totalIdx = headers.findIndex(h => h.includes('total'));
+  const payIdx = headers.findIndex(h => h.includes('payment') || h.includes('pay'));
+  const notesIdx = headers.findIndex(h => h.includes('notes'));
+
+  let imported = 0;
+  for(let i = 1; i < lines.length; i++) {
+    const row = parseCSVRow(lines[i]);
+    if(!row.length) continue;
+    const customer = custIdx > -1 ? row[custIdx]?.trim() : '';
+    const total = totalIdx > -1 ? Number(row[totalIdx]?.replace(/[$,]/g,'')) : 0;
+    if(!customer || !total) continue;
+
+    const data = {
+      date: dateIdx > -1 ? row[dateIdx]?.trim() : today(),
+      time: timeIdx > -1 ? row[timeIdx]?.trim() : '',
+      customer,
+      address: addrIdx > -1 ? row[addrIdx]?.trim() : '',
+      service: svcIdx > -1 ? row[svcIdx]?.trim() : 'Exterior Only',
+      total,
+      payment: payIdx > -1 ? row[payIdx]?.trim() : 'Cash',
+      notes: notesIdx > -1 ? row[notesIdx]?.trim() : '',
+    };
+
+    const{error} = await sb.from('window_jobs').insert([data]);
+    if(!error) imported++;
+  }
+
+  event.target.value = '';
+  await loadJobs();
+  toast(`Imported ${imported} jobs`,'ok');
+}
+
+function parseCSVRow(line) {
+  const result = [];
+  let current = '', inQuotes = false;
+  for(let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if(char === '"') { inQuotes = !inQuotes; }
+    else if(char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+    else { current += char; }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+// ── AI BOT ─────────────────────────────────────────────────────────────────
+function openAIBot() {
+  document.getElementById('aiBotOverlay').classList.add('open');
+  document.getElementById('aiResponse').style.display = 'none';
+  document.getElementById('aiLoading').style.display = 'none';
+  document.getElementById('aiInput').value = '';
+}
+
+function closeAIBot() {
+  document.getElementById('aiBotOverlay').classList.remove('open');
+}
+
+function askAI(question) {
+  document.getElementById('aiInput').value = question;
+  sendAI();
+}
+
+async function sendAI() {
+  const question = document.getElementById('aiInput').value.trim();
+  if(!question){toast('Type a question first','err');return}
+
+  document.getElementById('aiResponse').style.display = 'none';
+  document.getElementById('aiLoading').style.display = 'block';
+
+  // Build business context from real data
+  const allRev = jobs.reduce((s,j)=>s+Number(j.total||0),0);
+  const allExp = expenses.reduce((s,e)=>s+Number(e.amount||0),0);
+  const ws = weekOf(new Date());
+  const wj = jobs.filter(j=>inWeek(j.date,ws));
+  const we = expenses.filter(e=>inWeek(e.date,ws));
+  const weekRev = wj.reduce((s,j)=>s+Number(j.total||0),0);
+  const weekExp = we.reduce((s,e)=>s+Number(e.amount||0),0);
+  const lastWs = new Date(ws); lastWs.setDate(lastWs.getDate()-7);
+  const lastWj = jobs.filter(j=>inWeek(j.date,lastWs));
+  const lastWeekRev = lastWj.reduce((s,j)=>s+Number(j.total||0),0);
+
+  const serviceTotals = {};
+  jobs.forEach(j=>{const s=j.service||'Other';serviceTotals[s]=(serviceTotals[s]||0)+Number(j.total||0)});
+  const payTotals = {};
+  jobs.forEach(j=>{const p=j.payment||'Other';payTotals[p]=(payTotals[p]||0)+Number(j.total||0)});
+  const dayRevs = {};
+  wj.forEach(j=>{if(!j.date)return;const d=new Date(j.date+'T00:00:00');const day=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];dayRevs[day]=(dayRevs[day]||0)+Number(j.total||0)});
+
+  const context = `
+You are an AI business analyst for Florida Shine LLC, a window cleaning company run by Mike and Mason in Central Florida.
+
+CURRENT BUSINESS DATA:
+- Pay split: Mike 60%, Mason 40% of all revenue
+- Expenses split: Mike 60%, Mason 40% of all expenses
+
+THIS WEEK:
+- Jobs completed: ${wj.length}
+- Gross revenue: $${weekRev.toFixed(2)}
+- Expenses: $${weekExp.toFixed(2)}
+- Net profit: $${(weekRev-weekExp).toFixed(2)}
+- Mike earns (net): $${((weekRev-weekExp)*0.6).toFixed(2)}
+- Mason earns (net): $${((weekRev-weekExp)*0.4).toFixed(2)}
+- Avg job value: $${wj.length ? (weekRev/wj.length).toFixed(2) : 0}
+- Revenue by day: ${JSON.stringify(dayRevs)}
+
+LAST WEEK:
+- Gross revenue: $${lastWeekRev.toFixed(2)}
+- Jobs: ${lastWj.length}
+- Week over week change: ${lastWeekRev > 0 ? (((weekRev-lastWeekRev)/lastWeekRev)*100).toFixed(1) : 'N/A'}%
+
+ALL TIME:
+- Total jobs: ${jobs.length}
+- Total revenue: $${allRev.toFixed(2)}
+- Total expenses: $${allExp.toFixed(2)}
+- Net profit all time: $${(allRev-allExp).toFixed(2)}
+- Avg job value all time: $${jobs.length ? (allRev/jobs.length).toFixed(2) : 0}
+- Revenue by service: ${JSON.stringify(serviceTotals)}
+- Revenue by payment method: ${JSON.stringify(payTotals)}
+
+Be specific, use the actual numbers, be direct and actionable. Format your response clearly with sections if needed. Keep it conversational but data-driven.`;
+
+  try {
+    const response = await fetch('/.netlify/functions/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, context })
+    });
+
+    const data = await response.json();
+    const text = data.text || 'No response received.';
+
+    document.getElementById('aiLoading').style.display = 'none';
+    document.getElementById('aiResponse').style.display = 'block';
+    document.getElementById('aiResponse').textContent = text;
+  } catch(err) {
+    document.getElementById('aiLoading').style.display = 'none';
+    document.getElementById('aiResponse').style.display = 'block';
+    document.getElementById('aiResponse').textContent = 'Error connecting to AI. Please try again.';
+    console.error(err);
+  }
+}
+
+document.getElementById('aiBotOverlay').addEventListener('click', e => {
+  if(e.target.id === 'aiBotOverlay') closeAIBot();
+});
+
+</script>
+</body>
+</html>
