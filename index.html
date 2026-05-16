@@ -350,7 +350,8 @@ tr:hover td{background:var(--surface)}
   <!-- ══════════════════════════════════════════════ -->
   <div class="page active" id="page-dashboard">
     <!-- TOP KPI ROW -->
-    <div class="kpi-grid kpi-grid-6" id="dashKpis"></div>
+    <div id="dashGoalBar"></div>
+    <div class="kpi-grid kpi-grid-5" id="dashKpis"></div>
 
     <!-- MASON OWED BANNER -->
     <div id="dashBanner" style="display:none" class="owe-banner">
@@ -1047,7 +1048,8 @@ function payBadge(p){
 // DASHBOARD
 // ═══════════════════════════════════════════════
 function renderDashboard(){
-  const wj=jobs.filter(j=>inWeek(j.date,wkStart));
+  const wj=jobs.filter(j=>inWeek(j.date,wkStart)&&j.status!=='Scheduled');
+  const wjAll=jobs.filter(j=>inWeek(j.date,wkStart));
   const we=expenses.filter(e=>inWeek(e.date,wkStart));
   const rev=wj.reduce((s,j)=>s+Number(j.total||0),0);
   const expTotal=we.reduce((s,e)=>s+Number(e.amount||0),0);
@@ -1055,16 +1057,18 @@ function renderDashboard(){
   const mike=rev*.6, mason=rev*.4;
   const mikeNet=mike-expTotal*.6, masonNet=mason-expTotal*.4;
 
+  // Goal calculations
+  const goalPct=Math.min(Math.round(rev/weeklyGoal*100),100);
+  const goalOver=rev>weeklyGoal;
+  const goalColor=goalOver?'var(--green)':goalPct>=75?'var(--gold)':'var(--sky)';
+  const goalBarColor=goalOver?'#2D7D52':goalPct>=75?'#E8A020':'#378ADD';
+
   // Goal bar (sidebar)
   document.getElementById('sbGoalFill').style.width=goalPct+'%';
   document.getElementById('sbGoalRev').textContent=fmt(rev);
   document.getElementById('sbGoalTarget').textContent=fmt(weeklyGoal);
 
   // KPI cards
-  const goalPct=Math.min(Math.round(rev/weeklyGoal*100),100);
-  const goalOver=rev>weeklyGoal;
-  const goalColor=goalOver?'var(--green)':goalPct>=75?'var(--gold)':'var(--sky)';
-  const goalBarColor=goalOver?'#2D7D52':goalPct>=75?'#E8A020':'#378ADD';
   document.getElementById('dashKpis').innerHTML=`
     <div class="kpi k-blue"><div class="kpi-icon i-blue">📋</div><div class="kpi-label">Jobs This Week</div><div class="kpi-val">${wj.length}</div><div class="kpi-hint">Completed</div></div>
     <div class="kpi k-gold"><div class="kpi-icon i-gold">💵</div><div class="kpi-label">Total Revenue</div><div class="kpi-val">${fmt(rev)}</div><div class="kpi-hint">Gross</div></div>
@@ -1097,7 +1101,7 @@ function renderDashboard(){
     <div class="kpi k-navy" style="margin:0"><div class="kpi-label">Mike Net Take-Home</div><div class="kpi-val">${fmt(mikeNet)}</div><div class="kpi-hint">After 60% expenses</div></div>`;
 
   // Recent jobs
-  const sorted=[...wj].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+  const sorted=[...wjAll].filter(j=>j.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
   document.getElementById('dashRecentJobs').innerHTML=sorted.length?sorted.map(j=>`
     <div class="rj-row">
       <div>
@@ -1176,7 +1180,7 @@ function renderJobs(){
     <div class="kpi k-gold"><div class="kpi-label">Gross Revenue</div><div class="kpi-val">${fmt(rev)}</div></div>
     <div class="kpi k-navy"><div class="kpi-label">Mike (60%)</div><div class="kpi-val">${fmt(mike)}</div></div>
     <div class="kpi k-green"><div class="kpi-label">Mason (40%)</div><div class="kpi-val">${fmt(mason)}</div></div>`;
-  const sorted=[...wj].sort((a,b)=>a.date===b.date?(a.time||'').localeCompare(b.time||''):a.date.localeCompare(b.date));
+  const sorted=[...wj].filter(j=>j.date).sort((a,b)=>a.date===b.date?(a.time||'').localeCompare(b.time||''):a.date.localeCompare(b.date));
   document.getElementById('jobsTbody').innerHTML=sorted.length?sorted.map(j=>{
     const t=Number(j.total||0);
     return`<tr>
@@ -1653,7 +1657,8 @@ function closeAIBot(){document.getElementById('aiOverlay').classList.remove('ope
 function sendAI(){const q=document.getElementById('aiInput').value.trim();if(q)askAI(q)}
 
 async function askAI(prompt){
-  const wj=jobs.filter(j=>inWeek(j.date,wkStart));
+  const wj=jobs.filter(j=>inWeek(j.date,wkStart)&&j.status!=='Scheduled');
+  const wjAll=jobs.filter(j=>inWeek(j.date,wkStart));
   const we=expenses.filter(e=>inWeek(e.date,wkStart));
   const rev=wj.reduce((s,j)=>s+Number(j.total||0),0);
   const expTotal=we.reduce((s,e)=>s+Number(e.amount||0),0);
