@@ -73,6 +73,7 @@ body{font-family:'Sora',sans-serif;background:var(--surface);color:var(--ink);mi
 /* ── KPI CARDS ── */
 .kpi-grid{display:grid;gap:12px;margin-bottom:20px}
 .kpi-grid-5{grid-template-columns:repeat(5,1fr)}
+.kpi-grid-6{grid-template-columns:repeat(6,1fr)}
 .kpi-grid-4{grid-template-columns:repeat(4,1fr)}
 .kpi-grid-3{grid-template-columns:repeat(3,1fr)}
 .kpi{background:var(--white);border-radius:var(--r-lg);border:1px solid var(--border);padding:16px 18px;position:relative;overflow:hidden}
@@ -176,7 +177,7 @@ tr:hover td{background:var(--surface)}
   .sidebar{width:56px}.main-wrap{margin-left:56px}
   .sb-item span,.sb-brand,.sb-sub,.sb-goal,.sb-pname,.sb-prole,.sb-section,.sb-badge{display:none}
   .sb-logo{padding:14px 10px}.sb-item{justify-content:center;padding:12px}.sb-footer{padding:10px}
-  .kpi-grid-5{grid-template-columns:repeat(2,1fr)}.kpi-grid-4{grid-template-columns:repeat(2,1fr)}
+  .kpi-grid-5{grid-template-columns:repeat(2,1fr)}.kpi-grid-6{grid-template-columns:repeat(2,1fr)}.kpi-grid-4{grid-template-columns:repeat(2,1fr)}
   .ps-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}
 }
 @media(max-width:600px){.page{padding:14px}.kpi-grid-5{grid-template-columns:1fr 1fr}.kpi-grid-4{grid-template-columns:1fr 1fr}}
@@ -349,7 +350,7 @@ tr:hover td{background:var(--surface)}
   <!-- ══════════════════════════════════════════════ -->
   <div class="page active" id="page-dashboard">
     <!-- TOP KPI ROW -->
-    <div class="kpi-grid kpi-grid-5" id="dashKpis"></div>
+    <div class="kpi-grid kpi-grid-6" id="dashKpis"></div>
 
     <!-- MASON OWED BANNER -->
     <div id="dashBanner" style="display:none" class="owe-banner">
@@ -1054,19 +1055,35 @@ function renderDashboard(){
   const mike=rev*.6, mason=rev*.4;
   const mikeNet=mike-expTotal*.6, masonNet=mason-expTotal*.4;
 
-  // Goal bar
-  const pct=Math.min(Math.round(rev/weeklyGoal*100),100);
-  document.getElementById('sbGoalFill').style.width=pct+'%';
+  // Goal bar (sidebar)
+  document.getElementById('sbGoalFill').style.width=goalPct+'%';
   document.getElementById('sbGoalRev').textContent=fmt(rev);
   document.getElementById('sbGoalTarget').textContent=fmt(weeklyGoal);
 
   // KPI cards
+  const goalPct=Math.min(Math.round(rev/weeklyGoal*100),100);
+  const goalOver=rev>weeklyGoal;
+  const goalColor=goalOver?'var(--green)':goalPct>=75?'var(--gold)':'var(--sky)';
+  const goalBarColor=goalOver?'#2D7D52':goalPct>=75?'#E8A020':'#378ADD';
   document.getElementById('dashKpis').innerHTML=`
     <div class="kpi k-blue"><div class="kpi-icon i-blue">📋</div><div class="kpi-label">Jobs This Week</div><div class="kpi-val">${wj.length}</div><div class="kpi-hint">Completed</div></div>
     <div class="kpi k-gold"><div class="kpi-icon i-gold">💵</div><div class="kpi-label">Total Revenue</div><div class="kpi-val">${fmt(rev)}</div><div class="kpi-hint">Gross</div></div>
     <div class="kpi k-navy"><div class="kpi-icon i-navy">👤</div><div class="kpi-label">Mike Earns (60%)</div><div class="kpi-val">${fmt(mike)}</div><div class="kpi-hint">60% Split</div></div>
     <div class="kpi k-green"><div class="kpi-icon i-green">👤</div><div class="kpi-label">Mason Earns (40%)</div><div class="kpi-val">${fmt(mason)}</div><div class="kpi-hint">40% Split</div></div>
-    <div class="kpi k-red"><div class="kpi-icon i-red">⏰</div><div class="kpi-label">Owed to Mason</div><div class="kpi-val">${fmt(mason)}</div><div class="kpi-hint">Pay Monday</div></div>`;
+    <div class="kpi k-red"><div class="kpi-icon i-red">⏰</div><div class="kpi-label">Owed to Mason</div><div class="kpi-val">${fmt(mason)}</div><div class="kpi-hint">Pay Monday</div></div>
+    <div class="kpi" style="border-top:3px solid ${goalBarColor};cursor:pointer" onclick="openGoalEdit()">
+      <div class="kpi-icon" style="background:${goalOver?'var(--green-pale)':'var(--sky-light)'}">🎯</div>
+      <div class="kpi-label">Weekly Goal</div>
+      <div class="kpi-val" style="color:${goalColor};font-size:26px">${goalPct}%</div>
+      <div style="margin-top:6px;height:5px;background:var(--surface2);border-radius:999px;overflow:hidden">
+        <div style="height:100%;width:${goalPct}%;background:${goalBarColor};border-radius:999px;transition:width .5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmt(rev)}</span>
+        <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmt(weeklyGoal)}</span>
+      </div>
+      ${goalOver?`<div style="font-size:9px;font-weight:700;color:var(--green);margin-top:2px">🔥 Goal crushed! +${fmt(rev-weeklyGoal)}</div>`:`<div style="font-size:9px;color:var(--muted);margin-top:2px">${fmt(weeklyGoal-rev)} to go · tap to edit</div>`}
+    </div>`;
 
   // Banner
   const banner=document.getElementById('dashBanner');
