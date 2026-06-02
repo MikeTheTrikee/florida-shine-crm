@@ -1225,6 +1225,12 @@ function saveGoal(){
   toast('Weekly goal updated to '+fmt(val),'ok');
 }
 
+// Also allow pressing Enter in goal input
+document.addEventListener('DOMContentLoaded',()=>{
+  const gi=document.getElementById('goalInput');
+  if(gi)gi.addEventListener('keydown',e=>{if(e.key==='Enter')saveGoal();});
+});
+
 // ── LOAD DATA ──
 async function loadAll(){
   const[j,e]=await Promise.all([
@@ -1514,10 +1520,10 @@ function renderPayroll(){
     <td><span class="badge ${r.status==='Paid'?'b-paid':'b-pending'}">${r.status||'Paid'}</span></td>
     <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(r.gross_revenue)}</td>
     <td style="font-family:'JetBrains Mono',monospace">${fmt(r.net_revenue)}</td>
-    <td style="font-family:'JetBrains Mono',monospace;color:var(--navy)">${fmt(r.mike_gross_pay)}</td>
-    <td style="font-family:'JetBrains Mono',monospace;color:var(--green);font-weight:600">${fmt(r.mike_take_home)}</td>
-    <td style="font-family:'JetBrains Mono',monospace;color:var(--navy)">${fmt(r.mason_gross_pay)}</td>
-    <td style="font-family:'JetBrains Mono',monospace;color:var(--green);font-weight:600">${fmt(r.mason_take_home)}</td>
+    <td style="font-family:'JetBrains Mono',monospace;color:var(--navy)">${fmt(r.mike_gross_pay||0)}</td>
+    <td style="font-family:'JetBrains Mono',monospace;color:var(--green);font-weight:600">${fmt(r.mike_take_home||r.mike_net_pay||0)}</td>
+    <td style="font-family:'JetBrains Mono',monospace;color:var(--navy)">${fmt(r.mason_gross_pay||0)}</td>
+    <td style="font-family:'JetBrains Mono',monospace;color:var(--green);font-weight:600">${fmt(r.mason_take_home||r.mason_net_pay||0)}</td>
     <td style="font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.notes||''}">${r.notes||'—'}</td>
     <td><span class="badge b-locked">Locked</span></td>
   </tr>`).join('');
@@ -2689,12 +2695,33 @@ function renderGoalBar(rev,goalPct,goalOver,goalColor,goalBarColor){
 }
 
 function openMonthlyGoalEdit(){
-  const val=prompt('Set monthly revenue goal:',monthlyGoal);
-  if(!val||isNaN(val))return;
-  monthlyGoal=parseInt(val);
-  localStorage.setItem('fs_monthly_goal',monthlyGoal);
+  // Toggle inline edit box inside the goal bar
+  const existing=document.getElementById('monthlyGoalEditBox');
+  if(existing){existing.remove();return;}
+  const box=document.createElement('div');
+  box.id='monthlyGoalEditBox';
+  box.style.cssText='margin-top:10px;padding:10px;background:var(--surface);border-radius:var(--r);border:1px solid var(--border);display:flex;gap:8px;align-items:center';
+  box.innerHTML=`<span style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Monthly Goal</span>
+    <input type="number" id="monthlyGoalInput" value="${monthlyGoal}" min="1" style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;padding:6px 10px;border-radius:var(--r);border:1.5px solid var(--border);color:var(--ink);outline:none;max-width:120px" onkeydown="if(event.key==='Enter')saveMonthlyGoal()">
+    <button onclick="saveMonthlyGoal()" class="btn btn-primary btn-sm">Set</button>
+    <button onclick="document.getElementById('monthlyGoalEditBox').remove()" class="btn btn-ghost btn-sm">✕</button>`;
+  // Append inside dashGoalBar
+  const goalEl=document.getElementById('dashGoalBar');
+  if(goalEl)goalEl.appendChild(box);
+  setTimeout(()=>{const inp=document.getElementById('monthlyGoalInput');if(inp){inp.focus();inp.select();}},50);
+}
+
+function saveMonthlyGoal(){
+  const inp=document.getElementById('monthlyGoalInput');
+  if(!inp)return;
+  const val=parseInt(inp.value);
+  if(!val||val<1){toast('Enter a valid goal','err');return;}
+  monthlyGoal=val;
+  localStorage.setItem('fs_monthly_goal',val);
+  const box=document.getElementById('monthlyGoalEditBox');
+  if(box)box.remove();
   renderDashboard();
-  toast('Monthly goal updated to '+fmt(monthlyGoal),'ok');
+  toast('Monthly goal updated to '+fmt(val),'ok');
 }
 
 function renderReviewBar(){
@@ -2753,10 +2780,13 @@ function openReviewGoalEdit(){
 }
 
 function saveReviewGoal(){
-  const val=parseInt(document.getElementById('reviewGoalInput').value);
+  const el=document.getElementById('reviewGoalInput');
+  if(!el)return;
+  const val=parseInt(el.value);
   if(!val||val<1){toast('Enter a valid goal','err');return}
   reviewGoal=val;
   localStorage.setItem('fs_review_goal',val);
+  document.getElementById('reviewGoalEditBox').style.display='none';
   renderReviewBar();
   toast('Review goal updated to '+val,'ok');
 }
@@ -2827,11 +2857,14 @@ function renderJobSearch(){
   const el=document.getElementById('jobSearchResults');
   if(!q){el.innerHTML='';return;}
   const matches=jobs.filter(j=>{
-    return(j.customer||'').toLowerCase().includes(q)||
-           (j.address||'').toLowerCase().includes(q)||
-           (j.phone||'').toLowerCase().includes(q)||
-           (j.email||'').toLowerCase().includes(q);
-  }).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,30);
+    try{
+      return(j.customer||'').toLowerCase().includes(q)||
+             (j.address||'').toLowerCase().includes(q)||
+             (j.phone||'').replace(/\D/g,'').includes(q.replace(/\D/g,''))||
+             (j.email||'').toLowerCase().includes(q)||
+             (j.notes||'').toLowerCase().includes(q);
+    }catch{return false;}
+  }).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,50);
 
   if(!matches.length){el.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">No customers found</div>';return;}
 
@@ -2900,17 +2933,22 @@ function renderFollowUp(){
   const twelveMonthAgo=new Date(now);twelveMonthAgo.setMonth(twelveMonthAgo.getMonth()-12);
   const threeMonthAgo=new Date(now);threeMonthAgo.setMonth(threeMonthAgo.getMonth()-3);
 
-  // 6 month bucket: last service 3-6 months ago
+  const oneYrAgo=new Date(now);oneYrAgo.setFullYear(oneYrAgo.getFullYear()-1);
+
+  // 6 month bucket: last service 3-6 months ago (prime re-engagement window)
   const sixMonth=customers.filter(c=>{
+    if(!c.date)return false;
     const d=new Date(c.date+'T00:00:00');
-    return d>=twelveMonthAgo&&d<threeMonthAgo&&!contacted[(c.address||c.customer||'').toLowerCase().trim()];
+    const key=(c.address||c.customer||'').toLowerCase().trim();
+    return d>=sixMonthAgo&&d<threeMonthAgo&&!contacted[key];
   }).sort((a,b)=>a.date.localeCompare(b.date));
 
-  // 12 month bucket: last service 6-12 months ago  
+  // 12 month bucket: last service 6-12 months ago
   const twelveMonth=customers.filter(c=>{
+    if(!c.date)return false;
     const d=new Date(c.date+'T00:00:00');
-    const oneYrAgo=new Date(now);oneYrAgo.setFullYear(oneYrAgo.getFullYear()-1);
-    return d>=oneYrAgo&&d<sixMonthAgo&&!contacted[(c.address||c.customer||'').toLowerCase().trim()];
+    const key=(c.address||c.customer||'').toLowerCase().trim();
+    return d>=oneYrAgo&&d<sixMonthAgo&&!contacted[key];
   }).sort((a,b)=>a.date.localeCompare(b.date));
 
   // KPIs
@@ -2931,7 +2969,7 @@ function renderFollowUp(){
       <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${fmtDate(c.date)}<br><span style="font-size:9px;color:var(--muted)">${daysSince}d ago</span></td>
       <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(c.totalRev)}</td>
       <td style="white-space:nowrap">
-        ${c.phone?`<a href="#" onclick="event.preventDefault();requestReview('${c.phone}','${(c.customer||'').split(' ')[0]}')" style="display:block;font-size:10px;color:var(--sky);margin-bottom:3px">📞 Reach Out</a>`:''}
+        ${c.phone?`<a href="tel:${c.phone}" style="display:block;font-size:10px;color:var(--sky);margin-bottom:3px" onclick="event.stopPropagation()">📞 ${c.phone}</a><a href="#" onclick="event.preventDefault();event.stopPropagation();requestReview('${c.phone.replace(/'/g,'')}','${(c.customer||'').split(' ')[0].replace(/'/g,'')}')" style="display:block;font-size:10px;color:var(--gold);margin-bottom:3px">⭐ Request Review</a>`:''}
         <button class="btn btn-ghost btn-xs" onclick="markContacted('${key}')">✓ Contacted</button>
       </td>
     </tr>`;
