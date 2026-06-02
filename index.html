@@ -181,7 +181,7 @@ tr:hover td{background:var(--surface)}
 
 /* ── RESPONSIVE ── */
 /* ── MOBILE NAV ── */
-.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy);border-top:1px solid rgba(255,255,255,.08);z-index:200;padding:6px 0 8px}
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy);border-top:1px solid rgba(255,255,255,.08);z-index:9990;padding:6px 0 env(safe-area-inset-bottom,8px) 0;box-shadow:0 -4px 20px rgba(0,0,0,.3)}
 .mob-nav-items{display:flex;justify-content:space-around;align-items:center}
 .mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:all .15s;color:rgba(255,255,255,.4);border:none;background:none;font-family:'Sora',sans-serif;min-width:52px}
 .mob-nav-item.active{color:var(--gold)}
@@ -194,7 +194,7 @@ tr:hover td{background:var(--surface)}
 
 @media(max-width:768px){
   .sidebar{display:none}
-  .main-wrap{margin-left:0;padding-bottom:70px}
+  .main-wrap{margin-left:0;padding-bottom:80px}
   .mob-nav{display:block}
   .topbar{padding:0 14px}
   .page{padding:14px}
@@ -347,6 +347,10 @@ tr:hover td{background:var(--surface)}
     </div>
     <button class="lock-submit" onclick="checkPin()">UNLOCK</button>
     <div class="lock-error-msg" id="lockError">Incorrect code — try again</div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px;justify-content:center">
+      <input type="checkbox" id="rememberDevice" style="width:14px;height:14px;accent-color:var(--gold);cursor:pointer">
+      <span style="font-size:11px;color:rgba(255,255,255,.4);font-family:Sora,sans-serif">Remember this device for 30 days</span>
+    </label>
   </div>
   <div class="lock-footer">Florida Shine CRM · Members Only</div>
 </div>
@@ -388,6 +392,9 @@ tr:hover td{background:var(--surface)}
       <span class="sb-icon">🔭</span><span>Projections</span>
     </div>
     <div class="sb-section">Growth</div>
+    <div class="sb-item" onclick="nav('followup')">
+      <span class="sb-icon">🔄</span><span>Follow Up</span>
+    </div>
     <div class="sb-item" onclick="nav('plans')">
       <span class="sb-icon">⭐</span><span>Service Plans</span>
     </div>
@@ -444,22 +451,12 @@ tr:hover td{background:var(--surface)}
       <div style="height:1px;background:var(--border);margin:12px 0"></div>
       <div id="dashGoalBar"></div>
     </div>
-    <div class="kpi-grid kpi-grid-5" id="dashKpis"></div>
+    <div class="kpi-grid kpi-grid-4" id="dashKpis"></div>
 
-    <!-- MASON OWED BANNER -->
-    <div id="dashBanner" style="display:none" class="owe-banner">
-      <div>
-        <div class="owe-tag">Mason Owed This Week</div>
-        <div class="owe-amount" id="dashMasonOwe">$0</div>
-      </div>
-      <div style="text-align:right">
-        <div class="mike-keeps-label">Mike Keeps</div>
-        <div class="mike-keeps-amt" id="dashMikeKeeps">$0</div>
-      </div>
-    </div>
+
 
     <!-- NET STRIP ROW -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px" id="dashNetStrip"></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px" id="dashNetStrip"></div>
 
     <!-- MAIN GRID: left wide, right sidebar -->
     <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start">
@@ -535,6 +532,7 @@ tr:hover td{background:var(--surface)}
         <div class="wlabel" id="jobsWlabel"></div>
         <button class="wbtn" onclick="shiftWeek(1)">›</button>
         <button class="today-pill" onclick="jumpToday()">Today</button>
+        <button class="today-pill" onclick="toggleJobSearch()" id="searchToggleBtn">🔍 Search</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <label class="btn btn-green btn-sm" style="cursor:pointer">
@@ -544,6 +542,17 @@ tr:hover td{background:var(--surface)}
         <button class="btn btn-outline btn-sm" onclick="exportJobsCSV()">⬇ Export CSV</button>
         <button class="btn btn-primary btn-sm" onclick="openAdd()">+ Add Job</button>
       </div>
+    </div>
+    <!-- Search bar — hidden by default -->
+    <div id="jobSearchBar" style="display:none;margin-bottom:12px">
+      <div style="position:relative">
+        <input type="text" id="jobSearchInput" placeholder="Search by customer name, address, phone, email..." 
+          oninput="renderJobSearch()" 
+          style="width:100%;font-family:'Sora',sans-serif;font-size:13px;padding:10px 14px 10px 38px;border-radius:var(--r);border:1.5px solid var(--sky);outline:none;color:var(--ink);background:var(--white)">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none">🔍</span>
+        <button onclick="clearJobSearch()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
+      </div>
+      <div id="jobSearchResults" style="margin-top:10px"></div>
     </div>
     <div class="kpi-grid kpi-grid-4" style="margin-bottom:16px" id="jobsKpis"></div>
     <div class="card tbl-wrap">
@@ -796,6 +805,42 @@ tr:hover td{background:var(--surface)}
         <div style="padding:20px" id="projMilestones"></div>
       </div>
 
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- FOLLOW UP PAGE -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="page" id="page-followup">
+    <div class="kpi-grid kpi-grid-3" style="margin-bottom:20px" id="followupKpis"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <!-- 6 MONTH BUCKET -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">🕐 6 Months Ago</span>
+          <span style="font-size:11px;color:var(--muted)" id="sixMonthCount">0 customers</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Customer</th><th>Address</th><th>Last Service</th><th>Total Paid</th><th></th></tr></thead>
+            <tbody id="sixMonthBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- 12 MONTH BUCKET -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">📅 12 Months Ago</span>
+          <span style="font-size:11px;color:var(--muted)" id="twelveMonthCount">0 customers</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Customer</th><th>Address</th><th>Last Service</th><th>Total Paid</th><th></th></tr></thead>
+            <tbody id="twelveMonthBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1073,6 +1118,29 @@ tr:hover td{background:var(--surface)}
   <button class="mob-more-item" onclick="mobNav('plans',null);toggleMobMore()"><span>⭐</span>Service Plans</button>
 </div>
 
+
+<!-- DUPLICATE DETECTION MODAL -->
+<div class="overlay" id="dupOverlay">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--gold)">⚠️ Repeat Customer Detected</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">This address already exists in your records.</p>
+    <div style="background:var(--surface);border-radius:var(--r);border:1px solid var(--border);padding:16px;margin-bottom:16px">
+      <div style="font-weight:600;font-size:14px;margin-bottom:4px" id="dupCustomerName"></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px" id="dupAddress"></div>
+      <div style="display:flex;gap:16px;font-size:12px">
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--navy);font-weight:600" id="dupVisits"></span>
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--green);font-weight:600" id="dupRevenue"></span>
+        <span style="color:var(--muted)" id="dupLastDate"></span>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--ink);margin-bottom:16px">Do you want to log this as a new visit to this customer?</p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cancelDuplicate()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmDuplicate()">✓ Log as Repeat Visit</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1095,6 +1163,11 @@ let editJobId=null, editExpId=null, selPay='', selCleaner='Both', selReview=fals
 let wkStart=weekOf(new Date()), expWkStart=weekOf(new Date()), payWkStart=weekOf(new Date());
 let analyticsPeriod='week';
 let weeklyGoal=parseInt(localStorage.getItem('fs_weekly_goal'))||2300;
+let monthlyGoal=parseInt(localStorage.getItem('fs_monthly_goal'))||8000;
+let reviewGoal=parseInt(localStorage.getItem('fs_review_goal'))||75;
+// Initialize manual reviews — default to 34 (current real count) if never set
+if(localStorage.getItem('fs_manual_reviews')===null)localStorage.setItem('fs_manual_reviews','34');
+let manualReviews=parseInt(localStorage.getItem('fs_manual_reviews'))||0;
 let mikeTaxPct=25, masonTaxPct=25;
 let pendingLockData=null;
 let chartInstances={};
@@ -1122,7 +1195,7 @@ function nav(page){
   });
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
-  const titles={dashboard:'Dashboard',jobs:'Customers',expenses:'Expenses',payroll:'Payroll',analytics:'Analytics',calendar:'Calendar',plans:'Service Plans',projections:'Projections'};
+  const titles={dashboard:'Dashboard',jobs:'Customers',expenses:'Expenses',payroll:'Payroll',analytics:'Analytics',calendar:'Calendar',plans:'Service Plans',projections:'Projections',followup:'Follow Up'};
   document.getElementById('topTitle').textContent=titles[page]||page;
   document.getElementById('topAddBtn').style.display=['jobs','dashboard','calendar'].includes(page)?'':'none';
   if(page==='dashboard')renderDashboard();
@@ -1133,6 +1206,7 @@ function nav(page){
   if(page==='calendar')renderCalendar();
   if(page==='plans')renderPlans();
   if(page==='projections')renderProjectionsPage();
+  if(page==='followup')renderFollowUp();
 }
 
 // ── GOAL EDIT ──
@@ -1219,18 +1293,17 @@ function renderDashboard(){
     <div class="kpi k-gold"><div class="kpi-icon i-gold">💵</div><div class="kpi-label">Total Revenue</div><div class="kpi-val">${fmt(rev)}</div><div class="kpi-hint">Gross</div></div>
     <div class="kpi k-navy"><div class="kpi-icon i-navy">👤</div><div class="kpi-label">Mike Earns (60%)</div><div class="kpi-val">${fmt(mike)}</div><div class="kpi-hint">60% Split</div></div>
     <div class="kpi k-green"><div class="kpi-icon i-green">👤</div><div class="kpi-label">Mason Earns (40%)</div><div class="kpi-val">${fmt(mason)}</div><div class="kpi-hint">40% Split</div></div>
-    <div class="kpi k-red"><div class="kpi-icon i-red">⏰</div><div class="kpi-label">Owed to Mason</div><div class="kpi-val">${fmt(mason)}</div><div class="kpi-hint">Pay Monday</div></div>`;
+`;
 
   // Banner
-  const banner=document.getElementById('dashBanner');
-  if(mason>0){banner.style.display='flex';document.getElementById('dashMasonOwe').textContent=fmt(mason);document.getElementById('dashMikeKeeps').textContent=fmt(mike)}
-  else banner.style.display='none';
+
 
   // Net strip
   document.getElementById('dashNetStrip').innerHTML=`
     <div class="kpi k-red" style="margin:0"><div class="kpi-label">Total Expenses</div><div class="kpi-val" style="color:var(--red)">${fmt(expTotal)}</div><div class="kpi-hint">This week</div></div>
     <div class="kpi k-green" style="margin:0"><div class="kpi-label">Net Revenue</div><div class="kpi-val">${fmt(net)}</div><div class="kpi-hint">After expenses</div></div>
-    <div class="kpi k-navy" style="margin:0"><div class="kpi-label">Mike Net Take-Home</div><div class="kpi-val">${fmt(mikeNet)}</div><div class="kpi-hint">After 60% expenses</div></div>`;
+    <div class="kpi k-navy" style="margin:0"><div class="kpi-label">Mike Net Take-Home</div><div class="kpi-val">${fmt(mikeNet)}</div><div class="kpi-hint">After 60% expenses</div></div>
+    <div class="kpi k-green" style="margin:0;border-top:3px solid var(--green)"><div class="kpi-label">Mason Net Take-Home</div><div class="kpi-val" style="color:var(--green)">${fmt(masonNet)}</div><div class="kpi-hint">After 40% expenses</div></div>`;
 
   // Recent jobs
   const sorted=[...wjAll].filter(j=>j.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
@@ -1321,7 +1394,10 @@ function renderJobs(){
     const t=Number(j.total||0);
     return`<tr>
       <td style="white-space:nowrap"><span style="font-family:'JetBrains Mono',monospace;font-size:11px">${fmtDate(j.date)}</span>${j.time?`<br><span style="font-size:10px;color:var(--muted)">${fmtTime(j.time)}</span>`:''}</td>
-      <td style="font-weight:500">${j.customer||'—'}</td>
+      <td style="font-weight:500">
+        ${j.customer||'—'}
+        ${(()=>{const cnt=jobs.filter(x=>(x.address||'').toLowerCase().trim()===(j.address||'').toLowerCase().trim()).length;return cnt>1?'<span class="badge b-check" style="font-size:9px;margin-left:4px">↩ x'+cnt+'</span>':''})()}
+      </td>
       <td style="color:var(--muted);font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.address||''}">${j.address||'—'}</td>
       <td style="font-size:11px">${j.service||'—'}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(t)}</td>
@@ -1331,7 +1407,7 @@ function renderJobs(){
       <td style="font-size:11px;max-width:120px">
         ${j.phone?`<a href="tel:${j.phone}" style="display:block;color:var(--sky);font-family:'JetBrains Mono',monospace;font-size:10px;text-decoration:none" onclick="event.stopPropagation()">📞 ${j.phone}</a>`:''}
         ${j.email?`<a href="mailto:${j.email}" style="display:block;color:var(--sky);font-size:10px;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="event.stopPropagation()">✉️ ${j.email}</a>`:''}
-        ${j.phone?`<a href="sms:${j.phone}${/iPad|iPhone|iPod/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent("Hey "+((j.customer||'').split(' ')[0])+", it's Mike from Florida Shine! Really appreciate you choosing us. If you felt we did a great job, would you mind leaving us a quick Google review? Takes less than a minute and means everything to my local business. https://g.page/r/CRLMsD6qsjNWEBM/review")}" style="display:block;font-size:9px;color:var(--gold);text-decoration:none;margin-top:2px" onclick="event.stopPropagation()">⭐ Request Review</a>`:''}
+        ${j.phone?`<a href="#" style="display:block;font-size:9px;color:var(--gold);text-decoration:none;margin-top:2px" onclick="event.stopPropagation();requestReview('${j.phone}','${(j.customer||'').split(' ')[0]}')">⭐ Request Review</a>`:''}
         <div style="color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.notes||''}">${j.notes||''}</div>
       </td>
       <td style="white-space:nowrap">
@@ -1661,11 +1737,18 @@ function openEdit(id){
 function resetJobForm(){
   ['fDate','fTime','fCustomer','fAddress','fPhone','fEmail','fTotal','fNotes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fService').value='Exterior Only';
+  // Clear all pills first
   document.querySelectorAll('#jobOverlay .pill').forEach(p=>p.classList.remove('sel'));
+  // Default: Check payment
+  selPay='Check';
+  document.querySelectorAll('#jobOverlay .pill').forEach(p=>{if(p.textContent.includes('Check'))p.classList.add('sel')});
+  // Default: Completed
   selStatus='Completed';
   document.querySelectorAll('#statusPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0)});
+  // Default: Both 60/40
   selCleaner='Both';
   document.querySelectorAll('#cleanedByPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0)});
+  // Default: No review yet
   selReview=false;
   document.querySelectorAll('#reviewPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0)});
   document.getElementById('pMike').textContent='$0';
@@ -1857,7 +1940,7 @@ function toast(msg,type='info'){
 }
 
 // ── CLOSE MODALS ON BACKDROP ──
-['jobOverlay','expOverlay','aiOverlay','payNotesOverlay','taxOverlay','planOverlay','scheduleOverlay'].forEach(id=>{
+['jobOverlay','expOverlay','aiOverlay','payNotesOverlay','taxOverlay','planOverlay','scheduleOverlay','dupOverlay'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)e.target.classList.remove('open')});
 });
 
@@ -2468,11 +2551,12 @@ function renderProjectionsPage(){
 // ══════════════════════════════════════════════
 const LOCK_PIN='8194';
 
-// Check session
-if(sessionStorage.getItem('fs_unlocked')==='1'){
+// Check session or remembered device
+const fsRemember=localStorage.getItem('fs_remember');
+const fsRememberValid=fsRemember&&Date.now()<parseInt(fsRemember);
+if(sessionStorage.getItem('fs_unlocked')==='1'||fsRememberValid){
   document.getElementById('lockScreen').style.display='none';
 }else{
-  // Auto-focus input
   setTimeout(()=>{const inp=document.getElementById('lockInput');if(inp)inp.focus();},100);
 }
 
@@ -2481,6 +2565,10 @@ function checkPin(){
   const val=input.value.trim();
   if(val===LOCK_PIN){
     sessionStorage.setItem('fs_unlocked','1');
+    const remember=document.getElementById('rememberDevice');
+    if(remember&&remember.checked){
+      localStorage.setItem('fs_remember',Date.now()+30*24*60*60*1000);
+    }
     document.getElementById('lockScreen').style.display='none';
     input.value='';
   }else{
@@ -2535,54 +2623,142 @@ async function toggleReview(jobId,current){
 function renderGoalBar(rev,goalPct,goalOver,goalColor,goalBarColor){
   const el=document.getElementById('dashGoalBar');
   if(!el)return;
+
+  // Monthly calc
+  const now=new Date();
+  const monthRev=jobs.filter(j=>{
+    if(!j.date||j.status==='Scheduled')return false;
+    const d=new Date(j.date+'T00:00:00');
+    return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+  }).reduce((s,j)=>s+Number(j.total||0),0);
+  const monthPct=Math.min(Math.round(monthRev/monthlyGoal*100),100);
+  const monthOver=monthRev>=monthlyGoal;
+  const monthColor=monthOver?'var(--green)':monthPct>=75?'var(--gold)':'var(--sky)';
+  const monthBarColor=monthOver?'#2D7D52':monthPct>=75?'#E8A020':'#378ADD';
+
   el.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Weekly Revenue Goal</span>
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:${goalColor}">${goalPct}%</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--ink)">${fmt(rev)}</span>
-        ${goalOver
-          ?'<span style="font-size:10px;font-weight:700;color:var(--green);background:var(--green-pale);padding:2px 10px;border-radius:999px">🔥 Crushed! +'+fmt(rev-weeklyGoal)+'</span>'
-          :'<span style="font-size:11px;color:var(--muted)">'+fmt(weeklyGoal-rev)+' to go</span>'
-        }
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Weekly Revenue Goal</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:${goalColor}">${goalPct}%</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--ink)">${fmt(rev)}</span>
+          ${goalOver
+            ?'<span style="font-size:10px;font-weight:700;color:var(--green);background:var(--green-pale);padding:2px 10px;border-radius:999px">🔥 Crushed! +'+fmt(rev-weeklyGoal)+'</span>'
+            :'<span style="font-size:11px;color:var(--muted)">'+fmt(weeklyGoal-rev)+' to go</span>'
+          }
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">Goal: ${fmt(weeklyGoal)}</span>
+          <button onclick="openGoalEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 6px" title="Edit weekly goal">✏️</button>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">Goal: ${fmt(weeklyGoal)}</span>
-        <button onclick="openGoalEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 6px" title="Edit goal">✏️</button>
+      <div class="review-progress">
+        <div class="review-fill" style="width:${goalPct}%;background:${goalBarColor}"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:3px">
+        <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmt(rev)}</span>
+        <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmt(weeklyGoal)}</span>
       </div>
     </div>
-    <div class="review-progress">
-      <div class="review-fill" style="width:${goalPct}%;background:${goalBarColor}"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:3px">
-      <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmt(rev)}</span>
-      <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmt(weeklyGoal)}</span>
+    <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Monthly Revenue Goal</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:${monthColor}">${monthPct}%</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--ink)">${fmt(monthRev)}</span>
+          ${monthOver
+            ?'<span style="font-size:10px;font-weight:700;color:var(--green);background:var(--green-pale);padding:2px 10px;border-radius:999px">🔥 Crushed! +'+fmt(monthRev-monthlyGoal)+'</span>'
+            :'<span style="font-size:11px;color:var(--muted)">'+fmt(monthlyGoal-monthRev)+' to go</span>'
+          }
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">Goal: ${fmt(monthlyGoal)}</span>
+          <button onclick="openMonthlyGoalEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 6px" title="Edit monthly goal">✏️</button>
+        </div>
+      </div>
+      <div class="review-progress">
+        <div class="review-fill" style="width:${monthPct}%;background:${monthBarColor}"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:3px">
+        <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmt(monthRev)}</span>
+        <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmt(monthlyGoal)}</span>
+      </div>
     </div>`;
+}
+
+function openMonthlyGoalEdit(){
+  const val=prompt('Set monthly revenue goal:',monthlyGoal);
+  if(!val||isNaN(val))return;
+  monthlyGoal=parseInt(val);
+  localStorage.setItem('fs_monthly_goal',monthlyGoal);
+  renderDashboard();
+  toast('Monthly goal updated to '+fmt(monthlyGoal),'ok');
 }
 
 function renderReviewBar(){
   const el=document.getElementById('dashReviewBar');
   if(!el)return;
-  const totalReviews=jobs.filter(j=>j.review_left).length;
-  const goal=75;
-  const pct=Math.min(Math.round(totalReviews/goal*100),100);
+  const jobReviews=jobs.filter(j=>j.review_left).length;
+  const totalReviews=jobReviews+manualReviews;
+  const pct=Math.min(Math.round(totalReviews/reviewGoal*100),100);
+  const revOver=totalReviews>=reviewGoal;
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Google Reviews</span>
         <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--gold)">${totalReviews}</span>
-        <span style="font-size:11px;color:var(--muted)">of ${goal} to unlock Google Business Ads</span>
-        ${totalReviews>=goal?'<span style="font-size:10px;font-weight:700;color:var(--green);background:var(--green-pale);padding:2px 8px;border-radius:999px">🎉 Unlocked!</span>':''}
+        <span style="font-size:11px;color:var(--muted)">of ${reviewGoal} to unlock Google Business Ads</span>
+        ${revOver?'<span style="font-size:10px;font-weight:700;color:var(--green);background:var(--green-pale);padding:2px 8px;border-radius:999px">🎉 Unlocked!</span>':''}
       </div>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">${goal-totalReviews>0?(goal-totalReviews)+' more needed':'Goal reached!'}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">${reviewGoal-totalReviews>0?(reviewGoal-totalReviews)+' more needed':'Goal reached!'}</span>
+        <button onclick="openReviewGoalEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px" title="Edit review goal">✏️</button>
+      </div>
     </div>
     <div class="review-progress">
-      <div class="review-fill" style="width:${pct}%"></div>
+      <div class="review-fill" style="width:${pct}%;background:var(--gold)"></div>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-top:3px">
-      <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${totalReviews} reviews</span>
-      <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${goal} goal</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
+      <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${totalReviews} reviews (${jobReviews} logged + ${manualReviews} manual)</span>
+      <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${reviewGoal} goal</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <span style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Manual Reviews:</span>
+      <button onclick="adjustManualReviews(-1)" style="width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border);background:var(--white);color:var(--ink);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;line-height:1">−</button>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;min-width:28px;text-align:center">${manualReviews}</span>
+      <button onclick="adjustManualReviews(1)" style="width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border);background:var(--white);color:var(--ink);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
+      <span style="font-size:10px;color:var(--muted)">Reviews not yet logged to a job</span>
+    </div>
+    <div id="reviewGoalEditBox" style="display:none;margin-top:10px;padding:10px;background:var(--surface);border-radius:var(--r);border:1px solid var(--border)">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Set Review Goal</div>
+      <div style="display:flex;gap:6px">
+        <input type="number" id="reviewGoalInput" value="${reviewGoal}" min="1" style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;padding:6px 10px;border-radius:var(--r);border:1.5px solid var(--border);color:var(--ink);outline:none">
+        <button onclick="saveReviewGoal()" class="btn btn-primary btn-sm">Set</button>
+        <button onclick="document.getElementById('reviewGoalEditBox').style.display='none'" class="btn btn-ghost btn-sm">✕</button>
+      </div>
     </div>`;
+}
+
+function adjustManualReviews(delta){
+  manualReviews=Math.max(0,manualReviews+delta);
+  localStorage.setItem('fs_manual_reviews',manualReviews);
+  renderReviewBar();
+}
+
+function openReviewGoalEdit(){
+  const box=document.getElementById('reviewGoalEditBox');
+  if(box)box.style.display=box.style.display==='none'?'block':'none';
+}
+
+function saveReviewGoal(){
+  const val=parseInt(document.getElementById('reviewGoalInput').value);
+  if(!val||val<1){toast('Enter a valid goal','err');return}
+  reviewGoal=val;
+  localStorage.setItem('fs_review_goal',val);
+  renderReviewBar();
+  toast('Review goal updated to '+val,'ok');
 }
 
 
@@ -2607,6 +2783,211 @@ document.addEventListener('click',e=>{
     menu.classList.remove('open');
   }
 });
+
+
+// ══════════════════════════════════════════════
+// REQUEST REVIEW — smart desktop/mobile
+// ══════════════════════════════════════════════
+function requestReview(phone,firstName){
+  const msg="Hey "+firstName+", it's Mike from Florida Shine! Really appreciate you choosing us. If you felt we did a great job, would you mind leaving us a quick Google review? Takes less than a minute and means everything to my local business. https://g.page/r/CRLMsD6qsjNWEBM/review";
+  const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if(isMobile){
+    const sep=/iPad|iPhone|iPod/.test(navigator.userAgent)?'&':'?';
+    window.open('sms:'+phone+sep+'body='+encodeURIComponent(msg),'_self');
+  }else{
+    navigator.clipboard.writeText(msg).then(()=>{
+      toast('Review message copied to clipboard ✓','ok');
+    }).catch(()=>{
+      // Fallback — show in a prompt to manually copy
+      prompt('Copy this message:',msg);
+    });
+  }
+}
+
+
+// ══════════════════════════════════════════════
+// JOB SEARCH
+// ══════════════════════════════════════════════
+function toggleJobSearch(){
+  const bar=document.getElementById('jobSearchBar');
+  const showing=bar.style.display!=='none';
+  bar.style.display=showing?'none':'block';
+  if(!showing)setTimeout(()=>document.getElementById('jobSearchInput').focus(),50);
+  else{document.getElementById('jobSearchInput').value='';document.getElementById('jobSearchResults').innerHTML='';}
+}
+
+function clearJobSearch(){
+  document.getElementById('jobSearchInput').value='';
+  document.getElementById('jobSearchResults').innerHTML='';
+  document.getElementById('jobSearchInput').focus();
+}
+
+function renderJobSearch(){
+  const q=document.getElementById('jobSearchInput').value.trim().toLowerCase();
+  const el=document.getElementById('jobSearchResults');
+  if(!q){el.innerHTML='';return;}
+  const matches=jobs.filter(j=>{
+    return(j.customer||'').toLowerCase().includes(q)||
+           (j.address||'').toLowerCase().includes(q)||
+           (j.phone||'').toLowerCase().includes(q)||
+           (j.email||'').toLowerCase().includes(q);
+  }).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,30);
+
+  if(!matches.length){el.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">No customers found</div>';return;}
+
+  // Group by customer name
+  const byCustomer={};
+  matches.forEach(j=>{
+    const key=(j.customer||'Unknown').toLowerCase();
+    if(!byCustomer[key])byCustomer[key]={name:j.customer,jobs:[],totalRev:0,lastDate:'',address:j.address,phone:j.phone,email:j.email};
+    byCustomer[key].jobs.push(j);
+    byCustomer[key].totalRev+=Number(j.total||0);
+    if(!byCustomer[key].lastDate||j.date>byCustomer[key].lastDate)byCustomer[key].lastDate=j.date;
+  });
+
+  el.innerHTML='<div class="card tbl-wrap"><table><thead><tr><th>Customer</th><th>Address</th><th>Phone</th><th>Visits</th><th>Total Revenue</th><th>Last Service</th><th></th></tr></thead><tbody>'+
+    Object.values(byCustomer).map(c=>`<tr>
+      <td style="font-weight:600">${c.name||'—'}${c.jobs.length>1?'<span class="badge b-check" style="margin-left:6px;font-size:9px">↩ Repeat</span>':''}</td>
+      <td style="font-size:11px;color:var(--muted)">${c.address||'—'}</td>
+      <td style="font-size:11px">${c.phone?`<a href="tel:${c.phone}" style="color:var(--sky)">${c.phone}</a>`:'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;text-align:center">${c.jobs.length}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(c.totalRev)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${fmtDate(c.lastDate)}</td>
+      <td><button class="btn btn-primary btn-xs" onclick="openEdit('${c.jobs[0].id}')">View</button></td>
+    </tr>`).join('')+
+  '</tbody></table></div>';
+}
+
+// ══════════════════════════════════════════════
+// FOLLOW UP TAB
+// ══════════════════════════════════════════════
+// Track contacted customers in localStorage
+function getContacted(){
+  try{return JSON.parse(localStorage.getItem('fs_contacted')||'{}');}catch{return {};}
+}
+function markContacted(customerKey){
+  const c=getContacted();
+  c[customerKey]=Date.now();
+  localStorage.setItem('fs_contacted',JSON.stringify(c));
+  renderFollowUp();
+  toast('Marked as contacted ✓','ok');
+}
+
+function renderFollowUp(){
+  const now=new Date();
+  const contacted=getContacted();
+
+  // Get most recent job per customer (by address)
+  const custMap={};
+  jobs.filter(j=>j.date&&j.status!=='Scheduled').forEach(j=>{
+    const key=(j.address||j.customer||'').toLowerCase().trim();
+    if(!key)return;
+    if(!custMap[key]||j.date>custMap[key].date){
+      custMap[key]={...j,visitCount:0,totalRev:0};
+    }
+  });
+  // Sum visits + revenue per customer
+  jobs.filter(j=>j.date&&j.status!=='Scheduled').forEach(j=>{
+    const key=(j.address||j.customer||'').toLowerCase().trim();
+    if(custMap[key]){
+      custMap[key].visitCount=(custMap[key].visitCount||0)+1;
+      custMap[key].totalRev=(custMap[key].totalRev||0)+Number(j.total||0);
+    }
+  });
+
+  const customers=Object.values(custMap);
+  const sixMonthAgo=new Date(now);sixMonthAgo.setMonth(sixMonthAgo.getMonth()-6);
+  const twelveMonthAgo=new Date(now);twelveMonthAgo.setMonth(twelveMonthAgo.getMonth()-12);
+  const threeMonthAgo=new Date(now);threeMonthAgo.setMonth(threeMonthAgo.getMonth()-3);
+
+  // 6 month bucket: last service 3-6 months ago
+  const sixMonth=customers.filter(c=>{
+    const d=new Date(c.date+'T00:00:00');
+    return d>=twelveMonthAgo&&d<threeMonthAgo&&!contacted[(c.address||c.customer||'').toLowerCase().trim()];
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+
+  // 12 month bucket: last service 6-12 months ago  
+  const twelveMonth=customers.filter(c=>{
+    const d=new Date(c.date+'T00:00:00');
+    const oneYrAgo=new Date(now);oneYrAgo.setFullYear(oneYrAgo.getFullYear()-1);
+    return d>=oneYrAgo&&d<sixMonthAgo&&!contacted[(c.address||c.customer||'').toLowerCase().trim()];
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+
+  // KPIs
+  document.getElementById('followupKpis').innerHTML=`
+    <div class="kpi k-gold"><div class="kpi-icon i-gold">🕐</div><div class="kpi-label">Due for Follow Up (6mo)</div><div class="kpi-val">${sixMonth.length}</div><div class="kpi-hint">3–6 months since last clean</div></div>
+    <div class="kpi k-red"><div class="kpi-icon i-red">📅</div><div class="kpi-label">Long Overdue (12mo)</div><div class="kpi-val">${twelveMonth.length}</div><div class="kpi-hint">6–12 months since last clean</div></div>
+    <div class="kpi k-green"><div class="kpi-icon i-green">✓</div><div class="kpi-label">Contacted This Month</div><div class="kpi-val">${Object.values(contacted).filter(t=>Date.now()-t<30*24*60*60*1000).length}</div><div class="kpi-hint">Marked as reached out</div></div>`;
+
+  document.getElementById('sixMonthCount').textContent=sixMonth.length+' customers';
+  document.getElementById('twelveMonthCount').textContent=twelveMonth.length+' customers';
+
+  const rowHtml=(c)=>{
+    const key=(c.address||c.customer||'').toLowerCase().trim();
+    const daysSince=Math.round((now-new Date(c.date+'T00:00:00'))/(1000*60*60*24));
+    return`<tr>
+      <td style="font-weight:600">${c.customer||'—'}${c.visitCount>1?'<span class="badge b-check" style="margin-left:6px;font-size:9px">↩ x'+c.visitCount+'</span>':''}</td>
+      <td style="font-size:11px;color:var(--muted)">${c.address||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${fmtDate(c.date)}<br><span style="font-size:9px;color:var(--muted)">${daysSince}d ago</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(c.totalRev)}</td>
+      <td style="white-space:nowrap">
+        ${c.phone?`<a href="#" onclick="event.preventDefault();requestReview('${c.phone}','${(c.customer||'').split(' ')[0]}')" style="display:block;font-size:10px;color:var(--sky);margin-bottom:3px">📞 Reach Out</a>`:''}
+        <button class="btn btn-ghost btn-xs" onclick="markContacted('${key}')">✓ Contacted</button>
+      </td>
+    </tr>`;
+  };
+
+  document.getElementById('sixMonthBody').innerHTML=sixMonth.length
+    ?sixMonth.map(rowHtml).join('')
+    :'<tr class="empty-row"><td colspan="5">No customers in this window</td></tr>';
+
+  document.getElementById('twelveMonthBody').innerHTML=twelveMonth.length
+    ?twelveMonth.map(rowHtml).join('')
+    :'<tr class="empty-row"><td colspan="5">No customers in this window</td></tr>';
+}
+
+// ══════════════════════════════════════════════
+// DUPLICATE DETECTION
+// ══════════════════════════════════════════════
+let pendingDuplicateData=null;
+
+async function checkDuplicate(address,data){
+  if(!address)return false;
+  const normalized=address.toLowerCase().trim();
+  const matches=jobs.filter(j=>(j.address||'').toLowerCase().trim()===normalized);
+  if(!matches.length)return false;
+
+  // Found duplicate — show alert
+  pendingDuplicateData=data;
+  const existing=matches[0];
+  const totalVisits=matches.length;
+  const totalRev=matches.reduce((s,j)=>s+Number(j.total||0),0);
+  const lastDate=matches.sort((a,b)=>b.date.localeCompare(a.date))[0].date;
+
+  document.getElementById('dupCustomerName').textContent=existing.customer||'Unknown';
+  document.getElementById('dupAddress').textContent=address;
+  document.getElementById('dupVisits').textContent=totalVisits+' visit'+(totalVisits!==1?'s':'');
+  document.getElementById('dupRevenue').textContent=fmt(totalRev)+' total';
+  document.getElementById('dupLastDate').textContent='Last: '+fmtDate(lastDate);
+  document.getElementById('dupOverlay').classList.add('open');
+  return true;
+}
+
+async function confirmDuplicate(){
+  if(!pendingDuplicateData)return;
+  document.getElementById('dupOverlay').classList.remove('open');
+  const{error}=await sb.from('window_jobs').insert([pendingDuplicateData]);
+  if(error){toast('Error saving job: '+error.message,'err');return;}
+  pendingDuplicateData=null;
+  closeJobModal();
+  await refreshJobs();
+  toast('Repeat visit logged ✓','ok');
+}
+
+function cancelDuplicate(){
+  document.getElementById('dupOverlay').classList.remove('open');
+  pendingDuplicateData=null;
+}
 
 </script>
 </body>
