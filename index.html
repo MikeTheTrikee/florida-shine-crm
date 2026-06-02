@@ -1212,8 +1212,13 @@ function nav(page){
 // ── GOAL EDIT ──
 function openGoalEdit(){
   const box=document.getElementById('goalEditBox');
-  box.style.display=box.style.display==='none'?'block':'none';
-  if(box.style.display==='block'){document.getElementById('goalInput').value=weeklyGoal;document.getElementById('goalInput').focus();}
+  const isHidden=box.style.display==='none'||box.style.display==='';
+  box.style.display=isHidden?'block':'none';
+  if(isHidden){
+    const inp=document.getElementById('goalInput');
+    inp.value=weeklyGoal;
+    setTimeout(()=>{inp.focus();inp.select();},50);
+  }
 }
 function saveGoal(){
   const val=parseInt(document.getElementById('goalInput').value);
@@ -1221,7 +1226,17 @@ function saveGoal(){
   weeklyGoal=val;
   localStorage.setItem('fs_weekly_goal',val);
   document.getElementById('goalEditBox').style.display='none';
-  renderDashboard();
+  // Fast update — just re-render the goal bar and sidebar, not the whole dashboard
+  const wj=jobs.filter(j=>inWeek(j.date,wkStart)&&j.status!=='Scheduled');
+  const rev=wj.reduce((s,j)=>s+Number(j.total||0),0);
+  const goalPct=Math.min(Math.round(rev/weeklyGoal*100),100);
+  const goalOver=rev>weeklyGoal;
+  const goalColor=goalOver?'var(--green)':goalPct>=75?'var(--gold)':'var(--sky)';
+  const goalBarColor=goalOver?'#2D7D52':goalPct>=75?'#E8A020':'#378ADD';
+  document.getElementById('sbGoalFill').style.width=goalPct+'%';
+  document.getElementById('sbGoalRev').textContent=fmt(rev);
+  document.getElementById('sbGoalTarget').textContent=fmt(weeklyGoal);
+  renderGoalBar(rev,goalPct,goalOver,goalColor,goalBarColor);
   toast('Weekly goal updated to '+fmt(val),'ok');
 }
 
@@ -2656,7 +2671,7 @@ function renderGoalBar(rev,goalPct,goalOver,goalColor,goalBarColor){
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">Goal: ${fmt(weeklyGoal)}</span>
-          <button onclick="openGoalEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 6px" title="Edit weekly goal">✏️</button>
+          <button onclick="openWeeklyGoalInline()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 6px" title="Edit weekly goal">✏️</button>
         </div>
       </div>
       <div class="review-progress">
@@ -2692,6 +2707,44 @@ function renderGoalBar(rev,goalPct,goalOver,goalColor,goalBarColor){
         <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmt(monthlyGoal)}</span>
       </div>
     </div>`;
+}
+
+function openWeeklyGoalInline(){
+  const existing=document.getElementById('weeklyGoalEditBox');
+  if(existing){existing.remove();return;}
+  const box=document.createElement('div');
+  box.id='weeklyGoalEditBox';
+  box.style.cssText='margin-top:10px;padding:10px;background:var(--surface);border-radius:var(--r);border:1px solid var(--border);display:flex;gap:8px;align-items:center';
+  box.innerHTML=`<span style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Weekly Goal</span>
+    <input type="number" id="weeklyGoalInlineInput" value="${weeklyGoal}" min="1" style="flex:1;font-family:'JetBrains Mono',monospace;font-size:14px;padding:6px 10px;border-radius:var(--r);border:1.5px solid var(--border);color:var(--ink);outline:none;max-width:120px" onkeydown="if(event.key==='Enter')saveWeeklyGoalInline()">
+    <button onclick="saveWeeklyGoalInline()" class="btn btn-primary btn-sm">Set</button>
+    <button onclick="document.getElementById('weeklyGoalEditBox').remove()" class="btn btn-ghost btn-sm">✕</button>`;
+  const goalEl=document.getElementById('dashGoalBar');
+  if(goalEl)goalEl.appendChild(box);
+  setTimeout(()=>{const inp=document.getElementById('weeklyGoalInlineInput');if(inp){inp.focus();inp.select();}},50);
+}
+
+function saveWeeklyGoalInline(){
+  const inp=document.getElementById('weeklyGoalInlineInput');
+  if(!inp)return;
+  const val=parseInt(inp.value);
+  if(!val||val<1){toast('Enter a valid goal','err');return;}
+  weeklyGoal=val;
+  localStorage.setItem('fs_weekly_goal',val);
+  const box=document.getElementById('weeklyGoalEditBox');
+  if(box)box.remove();
+  // Fast update sidebar + goal bar
+  const wj=jobs.filter(j=>inWeek(j.date,wkStart)&&j.status!=='Scheduled');
+  const rev=wj.reduce((s,j)=>s+Number(j.total||0),0);
+  const goalPct=Math.min(Math.round(rev/weeklyGoal*100),100);
+  const goalOver=rev>weeklyGoal;
+  const goalColor=goalOver?'var(--green)':goalPct>=75?'var(--gold)':'var(--sky)';
+  const goalBarColor=goalOver?'#2D7D52':goalPct>=75?'#E8A020':'#378ADD';
+  document.getElementById('sbGoalFill').style.width=goalPct+'%';
+  document.getElementById('sbGoalRev').textContent=fmt(rev);
+  document.getElementById('sbGoalTarget').textContent=fmt(weeklyGoal);
+  renderGoalBar(rev,goalPct,goalOver,goalColor,goalBarColor);
+  toast('Weekly goal updated to '+fmt(val),'ok');
 }
 
 function openMonthlyGoalEdit(){
