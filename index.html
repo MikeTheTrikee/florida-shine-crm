@@ -591,10 +591,19 @@ tr:hover td{background:var(--surface)}
           <tbody id="expTbody"></tbody>
         </table>
       </div>
-      <div>
+      <div style="display:flex;flex-direction:column;gap:12px">
         <div class="card card-pad">
           <div class="card-title" style="margin-bottom:14px">Expense Summary</div>
           <div id="expSummaryPanel"></div>
+        </div>
+        <!-- RECURRING EXPENSES -->
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">🔄 Recurring Monthly</span>
+            <button class="btn btn-ghost btn-sm" onclick="openAddRecurring()">+ Add</button>
+          </div>
+          <div style="padding:0 16px" id="recurringList"></div>
+          <div style="padding:12px 16px;border-top:1px solid var(--border)" id="recurringSummary"></div>
         </div>
       </div>
     </div>
@@ -1141,6 +1150,22 @@ tr:hover td{background:var(--surface)}
   </div>
 </div>
 
+
+<!-- ADD/EDIT RECURRING EXPENSE MODAL -->
+<div class="overlay" id="recurringOverlay">
+  <div class="modal">
+    <div class="modal-title" id="recurringModalTitle">Add Recurring Expense</div>
+    <div class="form-grid">
+      <div class="frow" style="grid-column:1/-1"><label>Name</label><input type="text" id="rName" placeholder="Netlify, Claude, ChatGPT..."></div>
+      <div class="frow" style="grid-column:1/-1"><label>Monthly Amount ($)</label><input type="number" id="rAmount" placeholder="0" min="0" step="0.01"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeRecurringModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRecurring()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1448,11 +1473,17 @@ function jumpExpToday(){expWkStart=weekOf(new Date());renderExpenses()}
 function renderExpenses(){
   document.getElementById('expWlabel').textContent=wkLabel(expWkStart);
   const we=expenses.filter(e=>inWeek(e.date,expWkStart));
-  const total=we.reduce((s,e)=>s+Number(e.amount||0),0);
+  const jobExpTotal=we.reduce((s,e)=>s+Number(e.amount||0),0);
+  // Add recurring expenses if this is week 1 of the month
+  const wStart=new Date(expWkStart);
+  const isWeek1=wStart.getDate()<=7;
+  const recurringTotal=isWeek1?getRecurring().reduce((s,r)=>s+Number(r.amount||0),0):0;
+  const total=jobExpTotal+recurringTotal;
   document.getElementById('expKpis').innerHTML=`
-    <div class="kpi k-red"><div class="kpi-label">Total Expenses</div><div class="kpi-val" style="color:var(--red)">${fmt(total)}</div></div>
+    <div class="kpi k-red"><div class="kpi-label">Total Expenses</div><div class="kpi-val" style="color:var(--red)">${fmt(total)}</div><div class="kpi-hint">${isWeek1&&recurringTotal>0?'incl. '+fmt(recurringTotal)+' recurring':'Job expenses'}</div></div>
     <div class="kpi k-navy"><div class="kpi-label">Mike Owes (60%)</div><div class="kpi-val">${fmt(total*.6)}</div></div>
     <div class="kpi k-green"><div class="kpi-label">Mason Owes (40%)</div><div class="kpi-val">${fmt(total*.4)}</div></div>`;
+  renderRecurring();
   const sorted=[...we].sort((a,b)=>a.date.localeCompare(b.date));
   document.getElementById('expTbody').innerHTML=sorted.length?sorted.map(e=>{
     const amt=Number(e.amount||0);
@@ -1961,7 +1992,7 @@ function toast(msg,type='info'){
 }
 
 // ── CLOSE MODALS ON BACKDROP ──
-['jobOverlay','expOverlay','aiOverlay','payNotesOverlay','taxOverlay','planOverlay','scheduleOverlay','dupOverlay'].forEach(id=>{
+['jobOverlay','expOverlay','aiOverlay','payNotesOverlay','taxOverlay','planOverlay','scheduleOverlay','dupOverlay','recurringOverlay'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)e.target.classList.remove('open')});
 });
 
@@ -3078,6 +3109,129 @@ async function confirmDuplicate(){
 function cancelDuplicate(){
   document.getElementById('dupOverlay').classList.remove('open');
   pendingDuplicateData=null;
+}
+
+
+// ══════════════════════════════════════════════
+// RECURRING EXPENSES
+// ══════════════════════════════════════════════
+let editRecurringId=null;
+
+function getRecurring(){
+  try{return JSON.parse(localStorage.getItem('fs_recurring')||'[]');}
+  catch{return [];}
+}
+function saveRecurringList(list){
+  localStorage.setItem('fs_recurring',JSON.stringify(list));
+}
+
+function openAddRecurring(){
+  editRecurringId=null;
+  document.getElementById('recurringModalTitle').textContent='Add Recurring Expense';
+  document.getElementById('rName').value='';
+  document.getElementById('rAmount').value='';
+  document.getElementById('recurringOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('rName').focus(),100);
+}
+
+function openEditRecurring(id){
+  const list=getRecurring();
+  const item=list.find(r=>r.id===id);
+  if(!item)return;
+  editRecurringId=id;
+  document.getElementById('recurringModalTitle').textContent='Edit Recurring Expense';
+  document.getElementById('rName').value=item.name||'';
+  document.getElementById('rAmount').value=item.amount||'';
+  document.getElementById('recurringOverlay').classList.add('open');
+}
+
+function closeRecurringModal(){
+  document.getElementById('recurringOverlay').classList.remove('open');
+  editRecurringId=null;
+}
+
+function saveRecurring(){
+  const name=document.getElementById('rName').value.trim();
+  const amount=parseFloat(document.getElementById('rAmount').value)||0;
+  if(!name){toast('Name required','err');return;}
+  if(!amount){toast('Amount required','err');return;}
+  const list=getRecurring();
+  if(editRecurringId){
+    const idx=list.findIndex(r=>r.id===editRecurringId);
+    if(idx>-1)list[idx]={...list[idx],name,amount};
+  }else{
+    list.push({id:Date.now().toString(),name,amount});
+  }
+  saveRecurringList(list);
+  closeRecurringModal();
+  renderRecurring();
+  toast(editRecurringId?'Updated ✓':'Added ✓','ok');
+}
+
+function deleteRecurring(id){
+  if(!confirm('Remove this recurring expense?'))return;
+  const list=getRecurring().filter(r=>r.id!==id);
+  saveRecurringList(list);
+  renderRecurring();
+  toast('Removed','info');
+}
+
+function renderRecurring(){
+  const list=getRecurring();
+  const el=document.getElementById('recurringList');
+  const sumEl=document.getElementById('recurringSummary');
+  if(!el)return;
+
+  const total=list.reduce((s,r)=>s+Number(r.amount||0),0);
+  const mikeShare=total*.6;
+  const masonShare=total*.4;
+
+  // Check if this is first week of month — apply to expenses
+  const now=new Date();
+  const isFirstWeek=now.getDate()<=7;
+
+  if(!list.length){
+    el.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">No recurring expenses yet</div>';
+    sumEl.innerHTML='';
+    return;
+  }
+
+  el.innerHTML=list.map(r=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--surface2)">
+      <div>
+        <div style="font-size:13px;font-weight:500">${r.name}</div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">Monthly · Applies week 1</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--red)">${fmt(r.amount)}</span>
+        <button class="btn btn-ghost btn-xs" onclick="openEditRecurring('${r.id}')">Edit</button>
+        <button class="btn btn-ghost btn-xs" style="color:var(--red);border-color:#F7C1C1" onclick="deleteRecurring('${r.id}')">✕</button>
+      </div>
+    </div>`).join('');
+
+  sumEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+      <span style="color:var(--muted)">Total Monthly</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--red)">${fmt(total)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+      <span style="color:var(--muted)">Mike (60%)</span>
+      <span style="font-family:'JetBrains Mono',monospace;color:var(--navy)">${fmt(mikeShare)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+      <span style="color:var(--muted)">Mason (40%)</span>
+      <span style="font-family:'JetBrains Mono',monospace;color:var(--green)">${fmt(masonShare)}</span>
+    </div>
+    <div style="font-size:9px;color:var(--muted);padding-top:6px;border-top:1px solid var(--border)">
+      ${isFirstWeek
+        ?'<span style="color:var(--gold);font-weight:600">⚡ Week 1 — recurring expenses applied this week</span>'
+        :'Recurring costs apply to week 1 of each month'}
+    </div>`;
+}
+
+// Auto-init Netlify if no recurring expenses set yet
+if(!localStorage.getItem('fs_recurring')){
+  saveRecurringList([{id:'netlify_default',name:'Netlify',amount:9}]);
 }
 
 </script>
