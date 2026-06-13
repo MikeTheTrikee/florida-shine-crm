@@ -309,6 +309,7 @@ tr:hover td{background:var(--surface)}
 .rev-badge.reviewed{background:#FEF3C7;color:#92400E;border-color:#F5B830}
 .rev-badge:hover{border-color:var(--gold)}
 
+
 /* ── PERIOD PILLS ── */
 .period-pill{padding:6px 14px;border-radius:999px;border:1.5px solid var(--border);background:var(--white);font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);font-family:'Sora',sans-serif;transition:all .15s}
 .period-pill:hover{border-color:var(--sky);color:var(--sky)}.period-pill.active{border-color:var(--gold);background:var(--gold-pale);color:var(--navy);font-weight:600}
@@ -398,6 +399,7 @@ tr:hover td{background:var(--surface)}
     <div class="sb-item" onclick="nav('plans')">
       <span class="sb-icon">⭐</span><span>Service Plans</span>
     </div>
+
   </nav>
   <div class="sb-footer">
     <div class="sb-profile">
@@ -555,7 +557,7 @@ tr:hover td{background:var(--surface)}
       <div id="jobSearchResults" style="margin-top:10px"></div>
     </div>
     <div class="kpi-grid kpi-grid-4" style="margin-bottom:16px" id="jobsKpis"></div>
-    <div class="card tbl-wrap">
+    <div id="jobsMainTable" class="card tbl-wrap">
       <table>
         <thead>
           <tr>
@@ -851,6 +853,8 @@ tr:hover td{background:var(--surface)}
         </div>
       </div>
     </div>
+  </div>
+
   </div>
 
 </div><!-- end main-wrap -->
@@ -1166,6 +1170,7 @@ tr:hover td{background:var(--surface)}
   </div>
 </div>
 
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1388,7 +1393,7 @@ function renderDashCharts(wj){
   // Payment chart
   const payTotals={};
   wj.forEach(j=>{const p=j.payment||'Other';payTotals[p]=(payTotals[p]||0)+Number(j.total||0)});
-  const payColors={Cash:'#2D7D52',Check:'#185FA5',Stripe:'#4C1D95',Venmo:'#075985',Zelle:'#92400E',Other:'#8A9BB5'};
+  const payColors={Cash:'#2D7D52',Check:'#185FA5',Stripe:'#4C1D95',Venmo:'#5BC4F5',Zelle:'#92400E',Other:'#8A9BB5'};
   const payLabels=Object.keys(payTotals);
   const payData=payLabels.map(k=>payTotals[k]);
   const payBg=payLabels.map(k=>payColors[k]||'#8A9BB5');
@@ -2926,20 +2931,35 @@ function toggleJobSearch(){
   const bar=document.getElementById('jobSearchBar');
   const showing=bar.style.display!=='none';
   bar.style.display=showing?'none':'block';
-  if(!showing)setTimeout(()=>document.getElementById('jobSearchInput').focus(),50);
-  else{document.getElementById('jobSearchInput').value='';document.getElementById('jobSearchResults').innerHTML='';}
+  const mainTable=document.getElementById('jobsMainTable');
+  if(mainTable)mainTable.style.display=showing?'':'none';
+  if(!showing){
+    setTimeout(()=>document.getElementById('jobSearchInput').focus(),50);
+  }else{
+    document.getElementById('jobSearchInput').value='';
+    document.getElementById('jobSearchResults').innerHTML='';
+    if(mainTable)mainTable.style.display='';
+  }
 }
 
 function clearJobSearch(){
   document.getElementById('jobSearchInput').value='';
   document.getElementById('jobSearchResults').innerHTML='';
   document.getElementById('jobSearchInput').focus();
+  const mainTable=document.getElementById('jobsMainTable');
+  if(mainTable)mainTable.style.display='';
 }
 
 function renderJobSearch(){
   const q=document.getElementById('jobSearchInput').value.trim().toLowerCase();
   const el=document.getElementById('jobSearchResults');
-  if(!q){el.innerHTML='';return;}
+  const mainTable=document.getElementById('jobsMainTable');
+  if(!q){
+    el.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">Start typing to search all customers...</div>';
+    if(mainTable)mainTable.style.display='none';
+    return;
+  }
+  if(mainTable)mainTable.style.display='none';
   const matches=jobs.filter(j=>{
     try{
       return(j.customer||'').toLowerCase().includes(q)||
