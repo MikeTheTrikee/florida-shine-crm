@@ -551,7 +551,7 @@ tr:hover td{background:var(--surface)}
     <div id="jobSearchBar" style="display:none;margin-bottom:12px">
       <div style="position:relative">
         <input type="text" id="jobSearchInput" placeholder="Search by customer name, address, phone, email..." 
-          oninput="renderJobSearch()" 
+          oninput="renderJobSearch()" onkeyup="renderJobSearch()" autocomplete="off" spellcheck="false"
           style="width:100%;font-family:'Sora',sans-serif;font-size:13px;padding:10px 14px 10px 38px;border-radius:var(--r);border:1.5px solid var(--sky);outline:none;color:var(--ink);background:var(--white)">
         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none">🔍</span>
         <button onclick="clearJobSearch()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
@@ -3010,23 +3010,28 @@ function clearJobSearch(){
 }
 
 function renderJobSearch(){
-  const q=document.getElementById('jobSearchInput').value.trim().toLowerCase();
+  const inputEl=document.getElementById('jobSearchInput');
+  if(!inputEl)return;
+  const q=(inputEl.value||'').trim().toLowerCase();
   const el=document.getElementById('jobSearchResults');
   const mainTable=document.getElementById('jobsMainTable');
-  if(!q){
+  if(!el)return;
+  if(q.length===0){
     el.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">Start typing to search all customers...</div>';
     if(mainTable)mainTable.style.display='none';
     return;
   }
   if(mainTable)mainTable.style.display='none';
-  const matches=jobs.filter(j=>{
-    try{
-      return(j.customer||'').toLowerCase().includes(q)||
-             (j.address||'').toLowerCase().includes(q)||
-             (j.phone||'').replace(/\D/g,'').includes(q.replace(/\D/g,''))||
-             (j.email||'').toLowerCase().includes(q)||
-             (j.notes||'').toLowerCase().includes(q);
-    }catch{return false;}
+  const qDigits=q.replace(/[^0-9]/g,'');
+  const matches=(jobs||[]).filter(j=>{
+    if(!j)return false;
+    const custMatch=(j.customer||'').toLowerCase().indexOf(q)!==-1;
+    const addrMatch=(j.address||'').toLowerCase().indexOf(q)!==-1;
+    const emailMatch=(j.email||'').toLowerCase().indexOf(q)!==-1;
+    const notesMatch=(j.notes||'').toLowerCase().indexOf(q)!==-1;
+    const phoneDigits=(j.phone||'').replace(/[^0-9]/g,'');
+    const phoneMatch=qDigits.length>=3&&phoneDigits.indexOf(qDigits)!==-1;
+    return custMatch||addrMatch||emailMatch||notesMatch||phoneMatch;
   }).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,50);
 
   if(!matches.length){el.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">No customers found</div>';return;}
@@ -3041,16 +3046,36 @@ function renderJobSearch(){
     if(!byCustomer[key].lastDate||j.date>byCustomer[key].lastDate)byCustomer[key].lastDate=j.date;
   });
 
-  el.innerHTML='<div class="card tbl-wrap"><table><thead><tr><th>Customer</th><th>Address</th><th>Phone</th><th>Visits</th><th>Total Revenue</th><th>Last Service</th><th></th></tr></thead><tbody>'+
-    Object.values(byCustomer).map(c=>`<tr>
+  el.innerHTML='<div class="card tbl-wrap"><table><thead><tr><th>Customer</th><th>Address</th><th>Phone</th><th>Visits</th><th>Total Revenue</th><th>Last Service</th><th>Follow Up Status</th><th></th></tr></thead><tbody>'+
+    Object.values(byCustomer).map(c=>{
+      // Calculate months since last service and follow-up status
+      let followUpHtml='—';
+      if(c.lastDate){
+        const lastD=new Date(c.lastDate+'T00:00:00');
+        const now=new Date();
+        const monthsSince=(now-lastD)/(1000*60*60*24*30.44);
+        const monthsRounded=Math.floor(monthsSince*10)/10;
+        if(monthsSince>=6){
+          const overdueDays=Math.round((now-new Date(lastD.getFullYear(),lastD.getMonth()+6,lastD.getDate()))/(1000*60*60*24));
+          followUpHtml=`<span class="ft-status ft-replace">⚠ Due Now${overdueDays>0?' · '+overdueDays+'d overdue':''}</span>`;
+        }else if(monthsSince>=4){
+          const daysUntilDue=Math.round((new Date(lastD.getFullYear(),lastD.getMonth()+6,lastD.getDate())-now)/(1000*60*60*24));
+          followUpHtml=`<span class="ft-status ft-monitor">⏰ Due in ${daysUntilDue}d</span>`;
+        }else{
+          const daysUntilDue=Math.round((new Date(lastD.getFullYear(),lastD.getMonth()+6,lastD.getDate())-now)/(1000*60*60*24));
+          followUpHtml=`<span class="ft-status ft-good">✓ Good · ${daysUntilDue}d left</span>`;
+        }
+      }
+      return`<tr>
       <td style="font-weight:600">${c.name||'—'}${c.jobs.length>1?'<span class="badge b-check" style="margin-left:6px;font-size:9px">↩ Repeat</span>':''}</td>
       <td style="font-size:11px;color:var(--muted)">${c.address||'—'}</td>
       <td style="font-size:11px">${c.phone?`<a href="tel:${c.phone}" style="color:var(--sky)">${c.phone}</a>`:'—'}</td>
       <td style="font-family:'JetBrains Mono',monospace;text-align:center">${c.jobs.length}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(c.totalRev)}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${fmtDate(c.lastDate)}</td>
+      <td>${followUpHtml}</td>
       <td><button class="btn btn-primary btn-xs" onclick="openEdit('${c.jobs[0].id}')">View</button></td>
-    </tr>`).join('')+
+    </tr>`;}).join('')+
   '</tbody></table></div>';
 }
 
