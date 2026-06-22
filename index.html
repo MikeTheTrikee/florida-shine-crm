@@ -272,6 +272,8 @@ tr:hover td{background:var(--surface)}
 .plan-due.overdue{background:var(--red-pale);color:var(--red)}
 .plan-due.due-soon{background:#FEF3C7;color:#92400E}
 .plan-due.upcoming{background:var(--green-pale);color:var(--green)}
+.plan-due.potential{background:var(--gold-pale);color:var(--navy)}
+.plan-card.potential-card{border:1.5px dashed var(--gold);background:linear-gradient(135deg,#FFFBF0,#fff)}
 .plan-actions{display:flex;gap:6px;margin-top:4px}
 .plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media(max-width:900px){.plans-grid{grid-template-columns:repeat(2,1fr)}.cal-cell{min-height:80px}}
@@ -742,6 +744,7 @@ tr:hover td{background:var(--surface)}
     <div class="toolbar">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="period-pill active" onclick="filterPlans('all',this)">All Plans</button>
+        <button class="period-pill" onclick="filterPlans('Potential',this)">⭐ Potential</button>
         <button class="period-pill" onclick="filterPlans('Active',this)">Active</button>
         <button class="period-pill" onclick="filterPlans('Paused',this)">Paused</button>
         <button class="period-pill" onclick="filterPlans('Cancelled',this)">Cancelled</button>
@@ -925,6 +928,13 @@ tr:hover td{background:var(--surface)}
         <div class="pills" id="reviewPills">
           <button class="pill sel" onclick="pickReview(this,false)">No Review Yet</button>
           <button class="pill" onclick="pickReview(this,true)">⭐ Review Left</button>
+        </div>
+      </div>
+      <div class="frow" style="grid-column:1/-1">
+        <label>Service Plan Interest</label>
+        <div class="pills" id="planInterestPills">
+          <button class="pill sel" onclick="pickPlanInterest(this,false)">Not Interested</button>
+          <button class="pill" onclick="pickPlanInterest(this,true)">⭐ Interested — Add to Pipeline</button>
         </div>
       </div>
     </div>
@@ -1189,7 +1199,7 @@ const sb=supabase.createClient(SURL,SKEY);
 
 // ── STATE ──
 let jobs=[], expenses=[], payrollRecords=[], servicePlans=[];
-let editJobId=null, editExpId=null, selPay='', selCleaner='Both', selReview=false;
+let editJobId=null, editExpId=null, selPay='', selCleaner='Both', selReview=false, selPlanInterest=false;
 let wkStart=weekOf(new Date()), expWkStart=weekOf(new Date()), payWkStart=weekOf(new Date());
 let analyticsPeriod='week';
 let weeklyGoal=parseInt(localStorage.getItem('fs_weekly_goal'))||2300;
@@ -1788,6 +1798,8 @@ function openEdit(id){
   document.querySelectorAll('#cleanedByPills .pill').forEach(p=>{p.classList.toggle('sel',p.textContent.includes(selCleaner));});
   selReview=j.review_left||false;
   document.querySelectorAll('#reviewPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0?!selReview:selReview);});
+  selPlanInterest=j.plan_interest||false;
+  document.querySelectorAll('#planInterestPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0?!selPlanInterest:selPlanInterest);});
   previewSplit();
   document.getElementById('jobOverlay').classList.add('open');
 }
@@ -1808,6 +1820,8 @@ function resetJobForm(){
   // Default: No review yet
   selReview=false;
   document.querySelectorAll('#reviewPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0)});
+  selPlanInterest=false;
+  document.querySelectorAll('#planInterestPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0)});
   document.getElementById('pMike').textContent='$0';
   document.getElementById('pMason').textContent='$0';
 }
@@ -1830,7 +1844,7 @@ async function saveJob(){
   if(!customer){toast('Customer name required','err');return}
   if(!total||isNaN(total)){toast('Enter a valid total','err');return}
   if(!selPay){toast('Select a payment method','err');return}
-  const data={date:document.getElementById('fDate').value,time:document.getElementById('fTime').value,customer,address:document.getElementById('fAddress').value.trim(),phone:document.getElementById('fPhone').value.trim(),email:document.getElementById('fEmail').value.trim(),service:document.getElementById('fService').value,total:Number(total),payment:selPay,notes:document.getElementById('fNotes').value.trim(),status:selStatus,cleaned_by:selCleaner,review_left:selReview};
+  const data={date:document.getElementById('fDate').value,time:document.getElementById('fTime').value,customer,address:document.getElementById('fAddress').value.trim(),phone:document.getElementById('fPhone').value.trim(),email:document.getElementById('fEmail').value.trim(),service:document.getElementById('fService').value,total:Number(total),payment:selPay,notes:document.getElementById('fNotes').value.trim(),status:selStatus,cleaned_by:selCleaner,review_left:selReview,plan_interest:selPlanInterest};
   const{error}=editJobId
     ?await sb.from('window_jobs').update(data).eq('id',editJobId)
     :await sb.from('window_jobs').insert([data]);
@@ -2260,9 +2274,13 @@ function filterPlans(f,btn){
 function renderPlans(){
   const todayStr=today();
   const active=servicePlans.filter(p=>p.status==='Active');
+  const potential=servicePlans.filter(p=>p.status==='Potential');
   const mrr=active.filter(p=>p.plan_type==='Monthly').reduce((s,p)=>s+Number(p.price||0),0)
            +active.filter(p=>p.plan_type==='Bi-Monthly').reduce((s,p)=>s+Number(p.price||0),0)/2
            +active.filter(p=>p.plan_type==='Quarterly').reduce((s,p)=>s+Number(p.price||0),0)/3;
+  const potentialMrr=potential.filter(p=>p.plan_type==='Monthly').reduce((s,p)=>s+Number(p.price||0),0)
+           +potential.filter(p=>p.plan_type==='Bi-Monthly').reduce((s,p)=>s+Number(p.price||0),0)/2
+           +potential.filter(p=>p.plan_type==='Quarterly').reduce((s,p)=>s+Number(p.price||0),0)/3;
   const dueThisWeek=active.filter(p=>{
     if(!p.next_service)return false;
     const ns=new Date(p.next_service+'T00:00:00');
@@ -2274,7 +2292,7 @@ function renderPlans(){
   document.getElementById('planKpis').innerHTML=`
     <div class="kpi k-blue"><div class="kpi-icon i-blue">⭐</div><div class="kpi-label">Active Plans</div><div class="kpi-val">${active.length}</div><div class="kpi-hint">Total: ${servicePlans.length}</div></div>
     <div class="kpi k-gold"><div class="kpi-icon i-gold">📈</div><div class="kpi-label">Est. MRR</div><div class="kpi-val">${fmt(mrr)}</div><div class="kpi-hint">Monthly recurring</div></div>
-    <div class="kpi k-green"><div class="kpi-icon i-green">📅</div><div class="kpi-label">Due This Week</div><div class="kpi-val">${dueThisWeek.length}</div><div class="kpi-hint">Need scheduling</div></div>
+    <div class="kpi" style="border-top:3px solid var(--gold);background:var(--gold-pale)"><div class="kpi-icon" style="background:rgba(232,160,32,.15)">🎯</div><div class="kpi-label">Potential Plans</div><div class="kpi-val" style="color:var(--navy)">${potential.length}</div><div class="kpi-hint">+${fmt(potentialMrr)} MRR if closed</div></div>
     <div class="kpi k-navy"><div class="kpi-icon i-navy">💵</div><div class="kpi-label">Total Plan Value</div><div class="kpi-val">${fmt(totalVal)}</div><div class="kpi-hint">Per service cycle</div></div>`;
 
   // Due this week banner
@@ -2296,25 +2314,28 @@ function renderPlans(){
   }
 
   document.getElementById('plansGrid').innerHTML=filtered.map(p=>{
+    const isPotential=p.status==='Potential';
     const ns=p.next_service?new Date(p.next_service+'T00:00:00'):null;
     const daysUntil=ns?Math.round((ns-new Date())/(1000*60*60*24)):null;
     let dueClass='upcoming',dueLabel='—';
-    if(daysUntil!==null){
+    if(isPotential){
+      dueClass='potential';dueLabel='🎯 Not yet sold';
+    }else if(daysUntil!==null){
       if(daysUntil<0){dueClass='overdue';dueLabel=`${Math.abs(daysUntil)}d overdue`}
       else if(daysUntil<=7){dueClass='due-soon';dueLabel=`Due in ${daysUntil}d`}
       else{dueClass='upcoming';dueLabel=`Due ${fmtDate(p.next_service)}`}
     }
     const typeClass=p.plan_type==='Monthly'?'plan-monthly':p.plan_type==='Bi-Monthly'?'plan-bimonthly':'plan-quarterly';
-    return`<div class="plan-card">
+    return`<div class="plan-card${isPotential?' potential-card':''}">
       <div class="plan-card-header">
         <div>
-          <div class="plan-customer">${p.customer||'—'}</div>
+          <div class="plan-customer">${isPotential?'🎯 ':''}${p.customer||'—'}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">${p.address||''}</div>
         </div>
         <span class="plan-type-badge ${typeClass}">${p.plan_type}</span>
       </div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between">
-        <div><div class="plan-price">${fmt(p.price)}</div><div class="plan-price-label">per service</div></div>
+        <div><div class="plan-price">${fmt(p.price)}</div><div class="plan-price-label">${isPotential?'est. per service':'per service'}</div></div>
         <span class="plan-due ${dueClass}">${dueLabel}</span>
       </div>
       ${p.phone?`<div class="plan-detail">📞 ${p.phone}</div>`:''}
@@ -2322,8 +2343,12 @@ function renderPlans(){
       ${p.notes?`<div style="font-size:11px;color:var(--muted);background:var(--surface);padding:6px 8px;border-radius:6px">${p.notes}</div>`:''}
       <div class="plan-actions">
         <button class="btn btn-ghost btn-xs" onclick="openEditPlan('${p.id}')">Edit</button>
-        <button class="btn btn-primary btn-xs" onclick="scheduleFromPlan('${p.id}','${p.next_service||today()}');nav('calendar')">Schedule Visit</button>
-        ${p.status==='Active'?`<button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="pausePlan('${p.id}')">Pause</button>`:`<button class="btn btn-green btn-xs" onclick="reactivatePlan('${p.id}')">Reactivate</button>`}
+        ${isPotential
+          ?`<button class="btn btn-primary btn-xs" onclick="convertToActive('${p.id}')">✓ Convert to Active</button>
+             <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="declinePotential('${p.id}')">Not Interested</button>`
+          :`<button class="btn btn-primary btn-xs" onclick="scheduleFromPlan('${p.id}','${p.next_service||today()}');nav('calendar')">Schedule Visit</button>
+             ${p.status==='Active'?`<button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="pausePlan('${p.id}')">Pause</button>`:`<button class="btn btn-green btn-xs" onclick="reactivatePlan('${p.id}')">Reactivate</button>`}`
+        }
       </div>
     </div>`;
   }).join('');
@@ -2392,6 +2417,35 @@ async function savePlan(){
   renderPlans();
   renderCalendar();
   toast(editPlanId?'Plan updated ✓':'Plan added ✓','ok');
+}
+
+async function convertToActive(id){
+  const plan=servicePlans.find(p=>p.id===id);
+  if(!plan)return;
+  // Open the edit modal pre-filled so Mike can confirm pricing/dates before activating
+  editPlanId=id;
+  document.getElementById('planModalTitle').textContent='Activate Service Plan';
+  document.getElementById('pCustomer').value=plan.customer||'';
+  document.getElementById('pAddress').value=plan.address||'';
+  document.getElementById('pPhone').value=plan.phone||'';
+  document.getElementById('pEmail').value=plan.email||'';
+  document.getElementById('pPrice').value=plan.price||'';
+  document.getElementById('pStart').value=today();
+  document.getElementById('pNext').value='';
+  document.getElementById('pStatus').value='Active';
+  document.getElementById('pNotes').value=plan.notes||'';
+  selPlanType=plan.plan_type||'Monthly';
+  document.querySelectorAll('#planTypePills .pill').forEach(btn=>{
+    btn.classList.toggle('sel',btn.textContent.includes(selPlanType));
+  });
+  document.getElementById('planOverlay').classList.add('open');
+}
+
+async function declinePotential(id){
+  if(!confirm('Mark this customer as not interested? This will remove them from the pipeline.'))return;
+  await sb.from('service_plans').delete().eq('id',id);
+  await loadPlans();renderPlans();
+  toast('Removed from pipeline','info');
 }
 
 async function pausePlan(id){
@@ -2663,6 +2717,11 @@ function pickCleaner(btn,val){
 function pickReview(btn,val){
   document.querySelectorAll('#reviewPills .pill').forEach(p=>p.classList.remove('sel'));
   btn.classList.add('sel');selReview=val;
+}
+
+function pickPlanInterest(btn,val){
+  document.querySelectorAll('#planInterestPills .pill').forEach(p=>p.classList.remove('sel'));
+  btn.classList.add('sel');selPlanInterest=val;
 }
 
 async function toggleReview(jobId,current){
