@@ -1842,17 +1842,18 @@ async function saveJob(){
     :await sb.from('window_jobs').insert([data]);
   if(error){toast('Error: '+(error.message||error.details||JSON.stringify(error)),'err');console.error(error);return}
   if(selPlanInterest==='Quarterly'||selPlanInterest==='Bi-Yearly'){
-    await maybeCreatePotentialPlan(customer,address,phone,email,selPlanInterest);
+    await maybeCreatePotentialPlan(customer,address,phone,email,selPlanInterest,Number(total),data.date);
   }
   closeJobModal();
   await refreshJobs();
   toast(editJobId?'Job updated ✓':'Job added ✓','ok');
 }
 
-async function maybeCreatePotentialPlan(customer,address,phone,email,tier){
+async function maybeCreatePotentialPlan(customer,address,phone,email,tier,jobTotal,jobDate){
   const{data:existing}=await sb.from('service_plans').select('id').eq('customer',customer).eq('status','Potential');
   if(existing&&existing.length>0)return;
-  const planData={customer,address,phone,email,plan_type:tier,price:0,start_date:null,next_service:null,status:'Potential',notes:'Auto-added from job — interested in '+tier+' plan'};
+  const priceNote=jobTotal?' — original job: $'+jobTotal.toFixed(0)+(jobDate?' on '+jobDate:''):'';
+  const planData={customer,address,phone,email,plan_type:tier,price:0,start_date:null,next_service:null,status:'Potential',notes:'Auto-added from job — interested in '+tier+' plan'+priceNote};
   const{error}=await sb.from('service_plans').insert([planData]);
   if(error){console.error('Potential plan create failed',error);return}
   if(typeof loadPlans==='function'){
