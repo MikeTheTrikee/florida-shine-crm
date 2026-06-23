@@ -924,17 +924,11 @@ tr:hover td{background:var(--surface)}
       </div>
       <div class="frow" style="grid-column:1/-1"><label>Notes</label><textarea id="fNotes" placeholder="Tips, special instructions, gate codes..."></textarea></div>
       <div class="frow" style="grid-column:1/-1">
-        <label>Google Review</label>
-        <div class="pills" id="reviewPills">
-          <button class="pill sel" onclick="pickReview(this,false)">No Review Yet</button>
-          <button class="pill" onclick="pickReview(this,true)">⭐ Review Left</button>
-        </div>
-      </div>
-      <div class="frow" style="grid-column:1/-1">
         <label>Service Plan Interest</label>
         <div class="pills" id="planInterestPills">
-          <button class="pill sel" onclick="pickPlanInterest(this,false)">Not Interested</button>
-          <button class="pill" onclick="pickPlanInterest(this,true)">⭐ Interested — Add to Pipeline</button>
+          <button class="pill sel" onclick="pickPlanInterest(this,'One-Time')">One-Time Clean</button>
+          <button class="pill" onclick="pickPlanInterest(this,'Quarterly')">⭐ Quarterly</button>
+          <button class="pill" onclick="pickPlanInterest(this,'Bi-Yearly')">⭐ Bi-Yearly</button>
         </div>
       </div>
     </div>
@@ -1199,7 +1193,7 @@ const sb=supabase.createClient(SURL,SKEY);
 
 // ── STATE ──
 let jobs=[], expenses=[], payrollRecords=[], servicePlans=[];
-let editJobId=null, editExpId=null, selPay='', selCleaner='Both', selReview=false, selPlanInterest=false;
+let editJobId=null, editExpId=null, selPay='', selCleaner='Both', selPlanInterest='One-Time';
 let wkStart=weekOf(new Date()), expWkStart=weekOf(new Date()), payWkStart=weekOf(new Date());
 let analyticsPeriod='week';
 let weeklyGoal=parseInt(localStorage.getItem('fs_weekly_goal'))||2300;
@@ -1637,7 +1631,6 @@ async function confirmLock(){
   const{error}=await sb.from('payroll_records').insert([pendingLockData]);
   if(error){toast('Error saving payroll: '+error.message,'err');console.error(error);return}
   closePayNotes();
-  payrollRecords=[(await sb.from('payroll_records').select('*').order('week_start',{ascending:false})).data||[]].flat();
   payrollRecords=(await sb.from('payroll_records').select('*').order('week_start',{ascending:false})).data||[];
   renderPayroll();
   toast('Payroll locked & saved ✓','ok');
@@ -1796,10 +1789,8 @@ function openEdit(id){
   document.querySelectorAll('#statusPills .pill').forEach(p=>{p.classList.toggle('sel',p.textContent.includes(selStatus));});
   selCleaner=j.cleaned_by||'Both';
   document.querySelectorAll('#cleanedByPills .pill').forEach(p=>{p.classList.toggle('sel',p.textContent.includes(selCleaner));});
-  selReview=j.review_left||false;
-  document.querySelectorAll('#reviewPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0?!selReview:selReview);});
-  selPlanInterest=j.plan_interest||false;
-  document.querySelectorAll('#planInterestPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0?!selPlanInterest:selPlanInterest);});
+  selPlanInterest=(typeof j.plan_interest==='string'&&j.plan_interest)?j.plan_interest:'One-Time';
+  document.querySelectorAll('#planInterestPills .pill').forEach(p=>{p.classList.toggle('sel',p.textContent.includes(selPlanInterest));});
   previewSplit();
   document.getElementById('jobOverlay').classList.add('open');
 }
@@ -1817,10 +1808,8 @@ function resetJobForm(){
   // Default: Both 60/40
   selCleaner='Both';
   document.querySelectorAll('#cleanedByPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0)});
-  // Default: No review yet
-  selReview=false;
-  document.querySelectorAll('#reviewPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0)});
-  selPlanInterest=false;
+  // Default: One-Time Clean
+  selPlanInterest='One-Time';
   document.querySelectorAll('#planInterestPills .pill').forEach((p,i)=>{p.classList.toggle('sel',i===0)});
   document.getElementById('pMike').textContent='$0';
   document.getElementById('pMason').textContent='$0';
@@ -1844,14 +1833,32 @@ async function saveJob(){
   if(!customer){toast('Customer name required','err');return}
   if(!total||isNaN(total)){toast('Enter a valid total','err');return}
   if(!selPay){toast('Select a payment method','err');return}
-  const data={date:document.getElementById('fDate').value,time:document.getElementById('fTime').value,customer,address:document.getElementById('fAddress').value.trim(),phone:document.getElementById('fPhone').value.trim(),email:document.getElementById('fEmail').value.trim(),service:document.getElementById('fService').value,total:Number(total),payment:selPay,notes:document.getElementById('fNotes').value.trim(),status:selStatus,cleaned_by:selCleaner,review_left:selReview,plan_interest:selPlanInterest};
+  const address=document.getElementById('fAddress').value.trim();
+  const phone=document.getElementById('fPhone').value.trim();
+  const email=document.getElementById('fEmail').value.trim();
+  const data={date:document.getElementById('fDate').value,time:document.getElementById('fTime').value,customer,address,phone,email,service:document.getElementById('fService').value,total:Number(total),payment:selPay,notes:document.getElementById('fNotes').value.trim(),status:selStatus,cleaned_by:selCleaner,plan_interest:selPlanInterest};
   const{error}=editJobId
     ?await sb.from('window_jobs').update(data).eq('id',editJobId)
     :await sb.from('window_jobs').insert([data]);
-  if(error){toast('Error saving job','err');console.error(error);return}
+  if(error){toast('Error: '+(error.message||error.details||JSON.stringify(error)),'err');console.error(error);return}
+  if(selPlanInterest==='Quarterly'||selPlanInterest==='Bi-Yearly'){
+    await maybeCreatePotentialPlan(customer,address,phone,email,selPlanInterest);
+  }
   closeJobModal();
   await refreshJobs();
   toast(editJobId?'Job updated ✓':'Job added ✓','ok');
+}
+
+async function maybeCreatePotentialPlan(customer,address,phone,email,tier){
+  const{data:existing}=await sb.from('service_plans').select('id').eq('customer',customer).eq('status','Potential');
+  if(existing&&existing.length>0)return;
+  const planData={customer,address,phone,email,plan_type:tier,price:0,start_date:null,next_service:null,status:'Potential',notes:'Auto-added from job — interested in '+tier+' plan'};
+  const{error}=await sb.from('service_plans').insert([planData]);
+  if(error){console.error('Potential plan create failed',error);return}
+  if(typeof loadPlans==='function'){
+    await loadPlans();
+    if(document.querySelector('.page.active')?.id==='page-plans'&&typeof renderPlans==='function')renderPlans();
+  }
 }
 
 async function delJob(id){
@@ -1906,7 +1913,7 @@ async function saveExpense(){
   const{error}=editExpId
     ?await sb.from('window_expenses').update(data).eq('id',editExpId)
     :await sb.from('window_expenses').insert([data]);
-  if(error){toast('Error saving expense','err');console.error(error);return}
+  if(error){toast('Error: '+(error.message||error.details||JSON.stringify(error)),'err');console.error(error);return}
   closeExpModal();
   await refreshExpenses();
   toast(editExpId?'Expense updated ✓':'Expense added ✓','ok');
@@ -2714,11 +2721,6 @@ function pickCleaner(btn,val){
 // ══════════════════════════════════════════════
 // REVIEW PICKER
 // ══════════════════════════════════════════════
-function pickReview(btn,val){
-  document.querySelectorAll('#reviewPills .pill').forEach(p=>p.classList.remove('sel'));
-  btn.classList.add('sel');selReview=val;
-}
-
 function pickPlanInterest(btn,val){
   document.querySelectorAll('#planInterestPills .pill').forEach(p=>p.classList.remove('sel'));
   btn.classList.add('sel');selPlanInterest=val;
